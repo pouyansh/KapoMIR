@@ -1,0 +1,4 @@
+hazm==0.7.0
+libwapiti==0.2.1
+nltk==3.3
+six==1.13.0
