@@ -8,6 +8,9 @@ class TermList:
     def set_child(self, child):
         self.child = child
 
+    def set_parent(self, parent):
+        self.parent = parent
+
     def get_child(self):
         return self.child
 
@@ -24,43 +27,48 @@ class TermList:
         self.positions.append(position)
 
 
-
 class IndexTable:
     def __init__(self):
-        self.heads = {}
-        self.tails = {}
+        self.table = {}
 
     def get_table(self):
-        return self.heads, self.tails
+        return self.table
 
     def add_record(self, term, doc_id, position):
-        if term not in self.heads:
-            self.heads[term] = [TermList(doc_id, position, None, None)]
-            self.tails[term] = [self.heads[term][0]]
+        if term not in self.table:
+            self.table[term] = [TermList(doc_id, position, None, None)]
+            self.table[term].append(self.table[term][0])
         else:
-            last_term = self.tails[term][0]
+            last_term = self.table[term][1]
             if last_term.get_doc_id() == doc_id:
                 last_term.add_position(position)
             else:
-                last_term.set_child(TermList(doc_id, position, self.tails[term][0], None))
-                self.tails[term][0] = last_term.get_child()
+                last_term.set_child(TermList(doc_id, position, self.table[term][1], None))
+                self.table[term][1] = last_term.get_child()
 
     def delete_record(self, doc_id, term_list):
         for term in term_list:
-            if term in self.heads:
-                record = self.heads[term][0]
+            if term in self.table:
+                record = self.table[term][0]
                 while record:
                     if record.get_doc_id() == doc_id:
-                        record.get_parent().set_child(record.get_child())
+                        if record.get_parent():
+                            record.get_parent().set_child(record.get_child())
+                        else:
+                            if not record.get_child():
+                                del self.table[term]
+                                break
+                            else:
+                                self.table[term][0] = record.get_parent()
                         if record.get_child():
                             record.get_child().set_parent(record.get_parent())
                         else:
-                            self.tails[term][0] = record.get_parent()
-                        record = record.get_child()
+                            self.table[term][1] = record.get_parent()
+                    record = record.get_child()
 
     def get_all_occurrences(self, term):
-        if term in self.heads:
-            return self.heads[term]
+        if term in self.table:
+            return self.table[term]
 
 
 def insert_index(index_table, doc_list, offset):
@@ -80,3 +88,21 @@ def delete_index(index_table, doc_list, offset):
         index_table.delete_record(doc_id + offset, term_list)
     return index_table
 
+
+def insert_bigram_index(index_table, doc_list, offset):
+    for doc_id in range(len(doc_list)):
+        for item_position in range(len(doc_list[doc_id]) - 1):
+            term = doc_list[doc_id][item_position] + " " + doc_list[doc_id][item_position + 1]
+            index_table.add_record(term, doc_id + offset, item_position)
+    return index_table
+
+
+def delete_bigram_index(index_table, doc_list, offset):
+    for doc_id in range(len(doc_list)):
+        term_list = []
+        for term_index in range(len(doc_list[doc_id]) - 1):
+            term = doc_list[doc_id][term_index] + " " + doc_list[doc_id][term_index + 1]
+            if term not in term_list:
+                term_list.append(term)
+        index_table.delete_record(doc_id + offset, term_list)
+    return index_table

@@ -20,12 +20,24 @@ def main():
         token_list_english.append(english_preprocess(english_documents[i][1]))
     preprocessed_persian = stopwords(token_list_persian)
     preprocessed_english = stopwords(token_list_english)
-    index_table = insert_index(IndexTable(), preprocessed_persian, 0)
-    index_table = insert_index(index_table, preprocessed_english, 1600)
+    index_table = insert_bigram_index(IndexTable(), preprocessed_persian, 0)
+    index_table = insert_bigram_index(index_table, preprocessed_english, 1600)
     counter = 0
+    m_first = index_table.get_table()
     for item in m_first:
         counter += 1
-        if counter % 5000 == 34:
+        if counter % 5000 == 1034:
+            x = m_first[item][0]
+            while x:
+                print(item, x.get_doc_id(), x.get_positions())
+                x = x.get_child()
+    print("-----------------------")
+    index_table = delete_bigram_index(index_table, preprocessed_persian, 0)
+    counter = 0
+    m_first = index_table.get_table()
+    for item in m_first:
+        counter += 1
+        if counter % 2000 == 200:
             x = m_first[item][0]
             while x:
                 print(item, x.get_doc_id(), x.get_positions())
