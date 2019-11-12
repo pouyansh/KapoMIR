@@ -1,7 +1,7 @@
 import importlib
-from input_reader import *
-from preprocess import *
-from indexing import *
+from src.input_reader import *
+from src.preprocess import *
+from src.indexing import *
 import sys
 
 
@@ -16,11 +16,20 @@ def main():
             print(i)
         token_list_persian.append(persian_preprocess(persian_documents[i]))
     for i in range(len(english_documents)):
-        #feed in the body of documents index 1
+        # feed in the body of documents index 1
         token_list_english.append(english_preprocess(english_documents[i][1]))
     preprocessed_persian = stopwords(token_list_persian)
     preprocessed_english = stopwords(token_list_english)
-    create_index(preprocessed_persian)
+    index_table = insert_index(IndexTable(), preprocessed_persian, 0)
+    index_table = insert_index(index_table, preprocessed_english, 1600)
+    counter = 0
+    for item in m_first:
+        counter += 1
+        if counter % 5000 == 34:
+            x = m_first[item][0]
+            while x:
+                print(item, x.get_doc_id(), x.get_positions())
+                x = x.get_child()
 
 
 if __name__ == "__main__":
