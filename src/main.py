@@ -1,6 +1,7 @@
 import importlib
 from input_reader import *
 from preprocess import *
+from indexing import *
 import sys
 
 
@@ -17,9 +18,9 @@ def main():
     for i in range(len(english_documents)):
         #feed in the body of documents index 1
         token_list_english.append(english_preprocess(english_documents[i][1]))
-    stopwords(token_list_persian)
-    stopwords(token_list_english)
-
+    preprocessed_persian = stopwords(token_list_persian)
+    preprocessed_english = stopwords(token_list_english)
+    create_index(preprocessed_persian)
 
 
 if __name__ == "__main__":
