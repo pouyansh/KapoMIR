@@ -1,3 +1,6 @@
+import csv
+
+
 class TermList:
     def __init__(self, doc_id, position, parent, child):
         self.doc_id = doc_id
@@ -28,8 +31,11 @@ class TermList:
 
 
 class IndexTable:
-    def __init__(self):
+    def __init__(self, lines):
         self.table = {}
+        for line in lines:
+            for counter in range(2, len(line)):
+                self.add_record(line[0], line[1], int(line[counter]))
 
     def get_table(self):
         return self.table
@@ -70,6 +76,18 @@ class IndexTable:
         if term in self.table:
             return self.table[term][0]
 
+    def get_all_records(self):
+        lines = []
+        for term in self.table:
+            current_cell = self.table[term][0]
+            while current_cell:
+                line = [term, current_cell.get_doc_id()]
+                for i in current_cell.get_positions():
+                    line.append(i)
+                lines.append(line)
+                current_cell = current_cell.get_child()
+        return lines
+
 
 def insert_index(index_table, doc_list, offset):
     for doc_id in range(len(doc_list)):
@@ -106,3 +124,19 @@ def delete_bigram_index(index_table, doc_list, offset):
                 term_list.append(term)
         index_table.delete_record(doc_id + offset, term_list)
     return index_table
+
+
+def save_to_file(index_table, filename):
+    with open(filename, 'w', newline='', encoding="utf-8") as f:
+        writer = csv.writer(f, delimiter=' ')
+        for row in index_table.get_all_records():
+            writer.writerow(row)
+
+
+def read_from_file(filename):
+    with open(filename, 'r', newline='', encoding="utf-8") as f:
+        reader = csv.reader(f, delimiter=' ')
+        lines = []
+        for row in reader:
+            lines.append(row)
+        return IndexTable(lines)
