@@ -68,7 +68,7 @@ class IndexTable:
 
     def get_all_occurrences(self, term):
         if term in self.table:
-            return self.table[term]
+            return self.table[term][0]
 
 
 def insert_index(index_table, doc_list, offset):

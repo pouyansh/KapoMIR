@@ -12,36 +12,31 @@ def main():
         '../raw-database/Persian.xml', '{http://www.mediawiki.org/xml/export-0.10/}')
     english_documents = read_csv('../raw-database/English.csv')
     for i in range(len(persian_documents)):
-        if i % 100 == 0:
-            print(i)
         token_list_persian.append(persian_preprocess(persian_documents[i]))
     for i in range(len(english_documents)):
         # feed in the body of documents index 1
         token_list_english.append(english_preprocess(english_documents[i][1]))
+
+    # removing stopwords from term lists
     preprocessed_persian = stopwords(token_list_persian)
     preprocessed_english = stopwords(token_list_english)
-    index_table = insert_bigram_index(IndexTable(), preprocessed_persian, 0)
-    index_table = insert_bigram_index(index_table, preprocessed_english, 1600)
-    counter = 0
-    m_first = index_table.get_table()
-    for item in m_first:
-        counter += 1
-        if counter % 5000 == 1034:
-            x = m_first[item][0]
-            while x:
-                print(item, x.get_doc_id(), x.get_positions())
-                x = x.get_child()
-    print("-----------------------")
-    index_table = delete_bigram_index(index_table, preprocessed_persian, 0)
-    counter = 0
-    m_first = index_table.get_table()
-    for item in m_first:
-        counter += 1
-        if counter % 2000 == 200:
-            x = m_first[item][0]
-            while x:
-                print(item, x.get_doc_id(), x.get_positions())
-                x = x.get_child()
+
+    # creating indexing tables
+    index_table = insert_index(IndexTable(), preprocessed_persian, 0)
+    index_table = insert_index(index_table, preprocessed_english, len(preprocessed_persian))
+
+    # creating bigram indexing tables
+    index_bigram_table = insert_bigram_index(IndexTable(), preprocessed_persian, 0)
+    index_bigram_table = insert_bigram_index(index_bigram_table, preprocessed_english, len(preprocessed_persian))
+
+    # get input and search the term
+    while True:
+        term = input("Enter a word: ")
+        term = english_preprocess(term)[0]
+        element = index_table.get_all_occurrences(term)
+        while element:
+            print("document id: ", element.get_doc_id(), "\tpositions: ", element.get_positions())
+            element = element.get_child()
 
 
 if __name__ == "__main__":
