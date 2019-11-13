@@ -11,7 +11,7 @@ def main():
     persian_documents = read_xml(
         '../raw-database/Persian.xml', '{http://www.mediawiki.org/xml/export-0.10/}')
     english_documents = read_csv('../raw-database/English.csv')
-    for i in range(100):
+    for i in range(len(persian_documents)):
         token_list_persian.append(persian_preprocess(persian_documents[i]))
     for i in range(len(english_documents)):
         # feed in the body of documents index 1
@@ -22,13 +22,13 @@ def main():
     preprocessed_english = stopwords(token_list_english)
 
     # creating indexing tables
-    index_table = insert_index(IndexTable([]), preprocessed_persian, 0)
+    index_table = insert_index(IndexTable([], False, False), preprocessed_persian, 0)
     index_table = insert_index(index_table, preprocessed_english, len(preprocessed_persian))
     save_to_file(index_table, "../output/index_table.csv")
-    index_table = read_from_file("../output/index_table.csv")
+    # index_table = read_from_file("../output/index_table.csv")
 
     # creating bigram indexing tables
-    index_bigram_table = insert_bigram_index(IndexTable([]), preprocessed_persian, 0)
+    index_bigram_table = insert_bigram_index(IndexTable([], False, False), preprocessed_persian, 0)
     index_bigram_table = insert_bigram_index(index_bigram_table, preprocessed_english, len(preprocessed_persian))
 
     # get input and search the term
