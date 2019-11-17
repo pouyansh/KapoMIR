@@ -24,22 +24,23 @@ def main():
     preprocessed_english = stopwords(token_list_english)
 
     # creating indexing tables
-    index_table = insert_index(IndexTable([], True, False), preprocessed_persian, 0)
+    index_table = insert_index(IndexTable([], False, False), preprocessed_persian, 0)
     index_table = insert_index(index_table, preprocessed_english, len(preprocessed_persian))
-    save_to_file(index_table, "../output/index_table_VB.csv")
-    # index_table = read_from_file("../output/index_table.csv")
 
     # creating bigram indexing tables
-    # index_bigram_table = insert_bigram_index(IndexTable([], False, False), preprocessed_persian, 0)
-    # index_bigram_table = insert_bigram_index(index_bigram_table, preprocessed_english, len(preprocessed_persian))
+    index_table = insert_bigram_index(index_table, preprocessed_persian, 0)
+    index_table = insert_bigram_index(index_table, preprocessed_english, len(preprocessed_persian))
+    save_to_file(index_table, "../output/index_table.csv")
 
     # get input and search the term
     while True:
         term = input("Enter a word: ")
         term = english_preprocess(term)[0]
         element = index_table.get_all_occurrences(term)
+        doc_id = 0
         while element:
-            print("document id: ", element.get_doc_id(), "\tpositions: ", element.get_positions())
+            doc_id += variable_byte_decode(element.get_doc_id())[0]
+            print("document id: ", doc_id, "\tpositions: ", variable_byte_decode(element.get_positions()))
             element = element.get_child()
 
 

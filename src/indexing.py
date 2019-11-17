@@ -5,10 +5,11 @@ from src.utilities import *
 
 class TermList:
     def __init__(self, doc_id, position, parent, child, is_vb):
-        self.doc_id = variable_byte_encode(doc_id)
         if is_vb:
+            self.doc_id = variable_byte_encode(doc_id)
             self.positions = variable_byte_encode(position)
         else:
+            self.doc_id = doc_id
             self.positions = [position]
         self.parent = parent
         self.child = child
@@ -153,8 +154,12 @@ class IndexTable:
     def delete_record(self, doc_id, term_list):
         for term in term_list:
             if term in self.table:
-                record = self.search_cell(term, doc_id)
-                if record.get_doc_id() == doc_id:
+                if self.is_vb:
+                    record, record_doc_id = self.search_cell_vb(term, doc_id)
+                else:
+                    record = self.search_cell(term, doc_id)
+                    record_doc_id = record.get_doc_id()
+                if record_doc_id == doc_id:
                     if record.get_parent():
                         record.get_parent().set_child(record.get_child())
                     else:
