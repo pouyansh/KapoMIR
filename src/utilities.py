@@ -48,10 +48,32 @@ def gamma_encode(m):
     output_binary.append(0)
     for i in range(len(binary) - 1):
         output_binary.append(binary[len(binary) - 2 - i])
-    return binary_to_str(output_binary)
+    return list(reversed(output_binary))
+
+
+def gamma_decode(s):
+    whole_binary = str_to_binary(s)
+    whole_binary = list(reversed(whole_binary))
+    outputs = []
+    counter = 0
+    while counter < len(whole_binary):
+        length = 0
+        while whole_binary[counter] == 1:
+            length += 1
+            counter += 1
+        counter += 1
+        element = 1
+        for i in range(length):
+            element *= 2
+            element += whole_binary[counter]
+            counter += 1
+        outputs.append(element)
+    return list(reversed(outputs))
 
 
 def int_to_binary(m):
+    if m == 0:
+        return [0]
     binary = []
     while m >= 1:
         binary.append(m % 2)
@@ -77,12 +99,25 @@ def binary_to_str(binary):
         for i in range(8):
             out += num * byte[i]
             num *= 2
-        s = chr(out) + s
+        s += chr(out)
     if len(binary) > 0:
         num = 1
         out = 0
         for i in range(len(binary)):
             out += num * binary[i]
             num *= 2
-        s = chr(out) + s
+        s += chr(out)
     return s
+
+
+def str_to_binary(s):
+    whole_binary = []
+    for j in range(len(s) - 1):
+        c = s[j]
+        num = ord(c)
+        binary = int_to_binary(num)
+        whole_binary += binary + [0 for _ in range(8 - len(binary))]
+    c = s[-1]
+    num = ord(c)
+    whole_binary += int_to_binary(num)
+    return whole_binary

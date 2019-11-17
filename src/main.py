@@ -24,13 +24,13 @@ def main():
     preprocessed_english = stopwords(token_list_english)
 
     # creating indexing tables
-    index_table = insert_index(IndexTable([], False, False), preprocessed_persian, 0)
+    index_table = insert_index(IndexTable([], False, True), preprocessed_persian, 0)
     index_table = insert_index(index_table, preprocessed_english, len(preprocessed_persian))
 
     # creating bigram indexing tables
     index_table = insert_bigram_index(index_table, preprocessed_persian, 0)
     index_table = insert_bigram_index(index_table, preprocessed_english, len(preprocessed_persian))
-    save_to_file(index_table, "../output/index_table.csv")
+    save_to_file(index_table, "../output/index_table_gamma.csv")
 
     # get input and search the term
     while True:
@@ -39,8 +39,8 @@ def main():
         element = index_table.get_all_occurrences(term)
         doc_id = 0
         while element:
-            doc_id += variable_byte_decode(element.get_doc_id())[0]
-            print("document id: ", doc_id, "\tpositions: ", variable_byte_decode(element.get_positions()))
+            doc_id += gamma_decode(element.get_doc_id())[0]
+            print("document id: ", doc_id, "\tpositions: ", gamma_decode(element.get_positions()))
             element = element.get_child()
 
 
