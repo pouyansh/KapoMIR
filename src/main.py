@@ -4,6 +4,8 @@ from src.preprocess import *
 from src.indexing import *
 import sys
 
+from src.utilities import variable_byte_decode, variable_byte_encode
+
 
 def main():
     token_list_persian = []
@@ -22,14 +24,14 @@ def main():
     preprocessed_english = stopwords(token_list_english)
 
     # creating indexing tables
-    index_table = insert_index(IndexTable([], False, False), preprocessed_persian, 0)
+    index_table = insert_index(IndexTable([], True, False), preprocessed_persian, 0)
     index_table = insert_index(index_table, preprocessed_english, len(preprocessed_persian))
-    save_to_file(index_table, "../output/index_table.csv")
+    save_to_file(index_table, "../output/index_table_VB.csv")
     # index_table = read_from_file("../output/index_table.csv")
 
     # creating bigram indexing tables
-    index_bigram_table = insert_bigram_index(IndexTable([], False, False), preprocessed_persian, 0)
-    index_bigram_table = insert_bigram_index(index_bigram_table, preprocessed_english, len(preprocessed_persian))
+    # index_bigram_table = insert_bigram_index(IndexTable([], False, False), preprocessed_persian, 0)
+    # index_bigram_table = insert_bigram_index(index_bigram_table, preprocessed_english, len(preprocessed_persian))
 
     # get input and search the term
     while True:

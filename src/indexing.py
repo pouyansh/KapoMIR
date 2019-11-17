@@ -1,10 +1,15 @@
 import csv
 
+from src.utilities import *
+
 
 class TermList:
-    def __init__(self, doc_id, position, parent, child):
-        self.doc_id = doc_id
-        self.positions = [position]
+    def __init__(self, doc_id, position, parent, child, is_vb):
+        self.doc_id = variable_byte_encode(doc_id)
+        if is_vb:
+            self.positions = variable_byte_encode(position)
+        else:
+            self.positions = [position]
         self.parent = parent
         self.child = child
         self.last_position = position
@@ -29,10 +34,13 @@ class TermList:
 
     def add_position(self, position, is_vb):
         if is_vb:
-            self.positions.append(position - self.last_position)
+            self.positions += variable_byte_encode(position - self.last_position)
         else:
             self.positions.append(position)
         self.last_position = position
+
+    def set_positions(self, positions):
+        self.positions = positions
 
     def set_doc_id(self, doc_id):
         self.doc_id = doc_id
@@ -43,16 +51,44 @@ class IndexTable:
         self.table = {}
         self.is_vb = is_vb
         self.is_gamma = is_gamma
-        for line in lines:
-            term = line[0]
-            doc_id = line[1]
-            counter = 2
-            while counter < len(line):
-                if str(line[counter]) == "-1":
-                    doc_id = line[counter + 1]
+
+        # reading from file
+        if not self.is_vb:
+            for line in lines:
+                term = line[0]
+                doc_id = line[1]
+                counter = 2
+                while counter < len(line):
+                    if str(line[counter]) == "-1":
+                        doc_id = line[counter + 1]
+                        counter += 2
+                    self.add_record(term, doc_id, line[counter])
+                    counter += 1
+        else:
+            for line in lines:
+                term = line[0]
+                counter = 1
+                temp_term_list = None
+                while counter < len(line):
+                    doc_id = line[counter]
+                    doc_id_num = variable_byte_decode(doc_id)[0]
+                    positions = line[counter + 1]
                     counter += 2
-                self.add_record(term, doc_id, line[counter])
-                counter += 1
+                    if term not in self.table:
+                        new_term = TermList(doc_id, 0, None, None, self.is_vb)
+                        new_term.set_positions(positions)
+                        self.table[term] = [new_term]
+                        self.table[term].append(1)
+                        self.table[term].append(doc_id_num)
+                        self.table[term].append(new_term)
+                        temp_term_list = new_term
+                    else:
+                        new_term = TermList(doc_id, positions, temp_term_list, None, self.is_vb)
+                        temp_term_list.set_child(new_term)
+                        self.table[term][1] += 1
+                        self.table[term][2] += doc_id_num
+                        self.table[term][3] = new_term
+                        temp_term_list = new_term
 
     def get_table(self):
         return self.table
@@ -64,7 +100,7 @@ class IndexTable:
         return self.is_gamma
 
     def add_term_to_dictionary(self, term, doc_id, position):
-        self.table[term] = [TermList(doc_id, position, None, None)]
+        self.table[term] = [TermList(doc_id, position, None, None, self.is_vb)]
         self.table[term].append(1)
         self.table[term].append(doc_id)
         self.table[term].append(self.table[term][0])
@@ -81,9 +117,9 @@ class IndexTable:
         # case 2: this doc_id is lower than all other doc_ids. Should create a term list and add it to the head of
         # linked list
         if previous_id == self.table[term][0].get_doc_id() > doc_id:
-            new_term = TermList(doc_id, position, None, previous_term)
+            new_term = TermList(doc_id, position, None, previous_term, self.is_vb)
             if self.is_vb:
-                previous_term.set_doc_id(previous_id - doc_id)
+                previous_term.set_doc_id(variable_byte_encode(previous_id - doc_id))
             self.table[term][0] = new_term
             previous_term.set_parent(new_term)
             return
@@ -91,11 +127,11 @@ class IndexTable:
         # case 3: previous term has a doc id lower than doc_id
         child = previous_term.get_child()
         if self.is_vb:
-            new_term = TermList(doc_id - previous_id, position, previous_term, child)
+            new_term = TermList(doc_id - previous_id, position, previous_term, child, self.is_vb)
             if child:
-                child.set_doc_id(child.get_doc_id() - (doc_id - previous_id))
+                child.set_doc_id(variable_byte_encode(child.get_doc_id() - (doc_id - previous_id)))
         else:
-            new_term = TermList(doc_id, position, previous_term, child)
+            new_term = TermList(doc_id, position, previous_term, child, self.is_vb)
         if not child:
             self.table[term][3] = new_term
         else:
@@ -148,17 +184,17 @@ class IndexTable:
 
     def search_cell_vb(self, term, doc_id):
         record = self.table[term][0]
-        if record.get_doc_id() > doc_id:
-            return record, record.get_doc_id()
+        if variable_byte_decode(record.get_doc_id())[0] > doc_id:
+            return record, variable_byte_decode(record.get_doc_id())[0]
         if self.table[term][2] <= doc_id:
             return self.table[term][3], self.table[term][2]
-        sum_id = record.get_doc_id()
+        sum_id = variable_byte_decode(record.get_doc_id())[0]
         while record:
-            if record.get_child() and record.get_child().get_doc_id() + sum_id > doc_id:
+            if record.get_child() and variable_byte_decode(record.get_child().get_doc_id())[0] + sum_id > doc_id:
                 return record, sum_id
             if not record.get_child():
                 return record, sum_id
-            sum_id += record.get_doc_id()
+            sum_id += variable_byte_decode(record.get_doc_id())[0]
             record = record.get_child()
         return record
 
@@ -173,9 +209,12 @@ class IndexTable:
             current_line = [term]
             while current_cell:
                 current_line.append(current_cell.get_doc_id())
-                for i in current_cell.get_positions():
-                    current_line.append(i)
-                current_line.append(-1)
+                if self.is_vb:
+                    current_line.append(current_cell.get_positions())
+                else:
+                    for i in current_cell.get_positions():
+                        current_line.append(i)
+                    current_line.append(-1)
                 current_cell = current_cell.get_child()
             lines.append(current_line)
         return lines
@@ -185,7 +224,7 @@ def insert_index(index_table, doc_list, offset):
     for doc_id in range(len(doc_list)):
         for item_position in range(len(doc_list[doc_id])):
             term = doc_list[doc_id][item_position]
-            index_table.add_record(term, doc_id + offset, item_position)
+            index_table.add_record(term, doc_id + offset + 1, item_position)
     return index_table
 
 
@@ -195,7 +234,7 @@ def delete_index(index_table, doc_list, offset):
         for term in doc_list[doc_id]:
             if term not in term_list:
                 term_list.append(term)
-        index_table.delete_record(doc_id + offset, term_list)
+        index_table.delete_record(doc_id + offset + 1, term_list)
     return index_table
 
 
@@ -203,7 +242,7 @@ def insert_bigram_index(index_table, doc_list, offset):
     for doc_id in range(len(doc_list)):
         for item_position in range(len(doc_list[doc_id]) - 1):
             term = doc_list[doc_id][item_position] + " " + doc_list[doc_id][item_position + 1]
-            index_table.add_record(term, doc_id + offset, item_position)
+            index_table.add_record(term, doc_id + offset + 1, item_position)
     return index_table
 
 
@@ -214,7 +253,7 @@ def delete_bigram_index(index_table, doc_list, offset):
             term = doc_list[doc_id][term_index] + " " + doc_list[doc_id][term_index + 1]
             if term not in term_list:
                 term_list.append(term)
-        index_table.delete_record(doc_id + offset, term_list)
+        index_table.delete_record(doc_id + offset + 1, term_list)
     return index_table
 
 
