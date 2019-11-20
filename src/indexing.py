@@ -1,3 +1,4 @@
+import codecs
 import csv
 
 from src.utilities import *
@@ -5,14 +6,12 @@ from src.utilities import *
 
 class TermList:
     def __init__(self, doc_id, position, parent, child, is_vb, is_gamma):
+        self.doc_id = doc_id
         if is_vb:
-            self.doc_id = variable_byte_encode(doc_id)
             self.positions = variable_byte_encode(position)
         elif is_gamma:
-            self.doc_id = binary_to_str(gamma_encode(doc_id))
             self.positions = binary_to_str(gamma_encode(position))
         else:
-            self.doc_id = doc_id
             self.positions = [position]
         self.parent = parent
         self.child = child
@@ -64,47 +63,6 @@ class IndexTable:
         self.is_gamma = is_gamma
         self.read_from_file(lines)
 
-    def read_from_file(self, lines):
-        if self.is_vb or self.is_gamma:
-            for line in lines:
-                term = line[0]
-                counter = 1
-                temp_term_list = None
-                while counter < len(line):
-                    doc_id = line[counter]
-                    if self.is_vb:
-                        doc_id_num = variable_byte_decode(doc_id)[0]
-                    else:
-                        doc_id_num = gamma_decode(doc_id)[0]
-                    positions = line[counter + 1]
-                    counter += 2
-                    if term not in self.table:
-                        new_term = TermList(doc_id, 0, None, None, self.is_vb, self.is_gamma)
-                        new_term.set_positions(positions)
-                        self.table[term] = [new_term]
-                        self.table[term].append(1)
-                        self.table[term].append(doc_id_num)
-                        self.table[term].append(new_term)
-                        temp_term_list = new_term
-                    else:
-                        new_term = TermList(doc_id, positions, temp_term_list, None, self.is_vb, self.is_gamma)
-                        temp_term_list.set_child(new_term)
-                        self.table[term][1] += 1
-                        self.table[term][2] += doc_id_num
-                        self.table[term][3] = new_term
-                        temp_term_list = new_term
-        else:
-            for line in lines:
-                term = line[0]
-                doc_id = line[1]
-                counter = 2
-                while counter < len(line):
-                    if str(line[counter]) == "-1":
-                        doc_id = line[counter + 1]
-                        counter += 2
-                    self.add_record(term, doc_id, line[counter])
-                    counter += 1
-
     def get_table(self):
         return self.table
 
@@ -114,12 +72,86 @@ class IndexTable:
     def get_is_gamma(self):
         return self.is_gamma
 
-    def add_term_to_dictionary(self, term, doc_id, position):
-        self.table[term] = [TermList(doc_id, position, None, None, self.is_vb, self.is_gamma)]
+    def read_from_file(self, lines):
+        if self.is_vb or self.is_gamma:
+            for line in lines:
+                term = line[0]
+                counter = 1
+                temp_term_list = None
+                while counter < len(line):
+                    doc_id = line[counter]
+                    positions = line[counter + 1]
+                    if self.is_vb:
+                        doc_id_num = variable_byte_decode(doc_id)[0]
+                        positions = variable_byte_decode(positions)
+                    else:
+                        doc_id_num = gamma_decode(doc_id)[0]
+                        positions = gamma_decode(positions)
+                    counter += 2
+                    for position in positions:
+                        if term not in self.table:
+                            new_term = TermList(doc_id_num, position, None, None, self.is_vb, self.is_gamma)
+                            new_term.set_positions(positions)
+                            self.table[term] = [new_term]
+                            self.table[term].append(1)
+                            self.table[term].append(doc_id_num)
+                            self.table[term].append(new_term)
+                            temp_term_list = new_term
+                        else:
+                            new_term = TermList(doc_id_num, position, temp_term_list, None, self.is_vb, self.is_gamma)
+                            temp_term_list.set_child(new_term)
+                            self.table[term][1] += 1
+                            self.table[term][2] += doc_id_num
+                            self.table[term][3] = new_term
+                            temp_term_list = new_term
+        else:
+            for line in lines:
+                term = line[0]
+                doc_id = line[1]
+                counter = 2
+                while counter < len(line):
+                    if str(line[counter]) == "-1":
+                        if counter + 1 < len(line):
+                            doc_id = line[counter + 1]
+                        counter += 1
+                        continue
+                    self.add_record(term, doc_id, line[counter])
+                    counter += 1
+
+    def read_from_file_gamma(self, lines):
+        for line in lines:
+            term = line[0]
+            doc_ids = gamma_decode(line[1])
+            temp_term_list = self.create_term(term, doc_ids[0], line[2])
+            counter = 3
+            while counter < len(line):
+                doc_id = doc_ids[counter - 2]
+                positions = line[counter]
+                temp_term_list = self.insert_all_doc_occurrences(term, doc_id, positions, temp_term_list)
+                counter += 1
+
+    # For case when no TermList for term exists in the dictionary. Creates a TermList and adds it to the dictionary.
+    def create_term(self, term, doc_id, positions):
+        new_term = TermList(doc_id, 0, None, None, self.is_vb, self.is_gamma)
+        new_term.set_positions(positions)
+        self.table[term] = [new_term]
         self.table[term].append(1)
         self.table[term].append(doc_id)
-        self.table[term].append(self.table[term][0])
+        self.table[term].append(new_term)
+        return new_term
 
+    # For case when term exists in the dictionary and this new term will be placed at the end of the linked list.
+    # Gets a doc_id and the encoded representation of all the occurrences of that term in that doc.
+    def insert_all_doc_occurrences(self, term, doc_id, positions, parent):
+        new_term = TermList(doc_id, 0, parent, None, self.is_vb, self.is_gamma)
+        new_term.set_positions(positions)
+        parent.set_child(new_term)
+        self.table[term][1] += 1
+        self.table[term][2] += doc_id
+        self.table[term][3] = new_term
+        return new_term
+
+    # For case when we have just one position of a term occurrence in a doc_id
     def insert_term_list_in_dictionary(self, term, doc_id, position, previous_term, previous_id):
         if not previous_term.get_child():
             self.table[term][2] = doc_id
@@ -134,7 +166,7 @@ class IndexTable:
         if previous_id == self.table[term][0].get_doc_id() > doc_id:
             new_term = TermList(doc_id, position, None, previous_term, self.is_vb, self.is_gamma)
             if self.is_vb or self.is_gamma:
-                previous_term.set_doc_id(variable_byte_encode(previous_id - doc_id))
+                previous_term.set_doc_id(previous_id - doc_id)
             self.table[term][0] = new_term
             previous_term.set_parent(new_term)
             return
@@ -144,7 +176,7 @@ class IndexTable:
         if self.is_vb or self.is_gamma:
             new_term = TermList(doc_id - previous_id, position, previous_term, child, self.is_vb, self.is_gamma)
             if child:
-                child.set_doc_id(variable_byte_encode(child.get_doc_id() - (doc_id - previous_id)))
+                child.set_doc_id(child.get_doc_id() - (doc_id - previous_id))
         else:
             new_term = TermList(doc_id, position, previous_term, child, self.is_vb, self.is_gamma)
         if not child:
@@ -155,29 +187,20 @@ class IndexTable:
 
     def add_record(self, term, doc_id, position):
         if term not in self.table:
-            self.add_term_to_dictionary(term, doc_id, position)
+            if self.is_vb:
+                position = variable_byte_encode(position)
+            elif self.is_gamma:
+                position = binary_to_str(gamma_encode(position))
+            self.create_term(term, doc_id, position)
         else:
             self.table[term][1] += 1
-            if self.is_vb:
-                previous_term, previous_doc_id = self.search_cell_vb(term, doc_id)
-                self.insert_term_list_in_dictionary(term, doc_id, position, previous_term, previous_doc_id)
-            elif self.is_gamma:
-                previous_term, previous_doc_id = self.search_cell_gamma(term, doc_id)
-                self.insert_term_list_in_dictionary(term, doc_id, position, previous_term, previous_doc_id)
-            else:
-                previous_term = self.search_cell(term, doc_id)
-                self.insert_term_list_in_dictionary(term, doc_id, position, previous_term, previous_term.get_doc_id())
+            previous_term, previous_doc_id = self.search_cell(term, doc_id)
+            self.insert_term_list_in_dictionary(term, doc_id, position, previous_term, previous_doc_id)
 
     def delete_record(self, doc_id, term_list):
         for term in term_list:
             if term in self.table:
-                if self.is_vb:
-                    record, record_doc_id = self.search_cell_vb(term, doc_id)
-                elif self.is_gamma:
-                    record, record_doc_id = self.search_cell_gamma(term, doc_id)
-                else:
-                    record = self.search_cell(term, doc_id)
-                    record_doc_id = record.get_doc_id()
+                record, record_doc_id = self.search_cell(term, doc_id)
                 if record_doc_id == doc_id:
                     if record.get_parent():
                         record.get_parent().set_child(record.get_child())
@@ -186,77 +209,77 @@ class IndexTable:
                             del self.table[term]
                             continue
                         else:
-                            self.table[term][0] = record.get_parent()
+                            self.table[term][0] = record.get_child()
                     if record.get_child():
                         record.get_child().set_parent(record.get_parent())
                     else:
-                        self.table[term][1] = record.get_parent()
+                        self.table[term][3] = record.get_parent()
                 self.table[term][1] -= 1
 
     def search_cell(self, term, doc_id):
+        if self.is_vb or self.is_gamma:
+            return self.search_cell_vb_gamma(term, doc_id)
+
         record = self.table[term][0]
+        # check if doc_id of first record is higher than doc_id or doc_id the of the last record is lower than doc_id
         if record.get_doc_id() > doc_id:
-            return record
+            return record, record.get_doc_id()
         if self.table[term][3].get_doc_id() <= doc_id:
-            return self.table[term][3]
+            return self.table[term][3], self.table[term][3].get_doc_id()
+
         while record:
             if record.get_child() and record.get_child().get_doc_id() > doc_id:
-                return record
+                return record, record.get_doc_id()
             if not record.get_child():
-                return record
+                return record, record.get_doc_id()
             record = record.get_child()
 
-    def search_cell_vb(self, term, doc_id):
+    def search_cell_vb_gamma(self, term, doc_id):
         record = self.table[term][0]
-        if variable_byte_decode(record.get_doc_id())[0] > doc_id:
-            return record, variable_byte_decode(record.get_doc_id())[0]
+        if record.get_doc_id() > doc_id:
+            return record, record.get_doc_id()
         if self.table[term][2] <= doc_id:
             return self.table[term][3], self.table[term][2]
-        sum_id = variable_byte_decode(record.get_doc_id())[0]
+        sum_id = record.get_doc_id()
         while record:
-            if record.get_child() and variable_byte_decode(record.get_child().get_doc_id())[0] + sum_id > doc_id:
+            if record.get_child() and record.get_child().get_doc_id() + sum_id > doc_id:
                 return record, sum_id
             if not record.get_child():
                 return record, sum_id
-            sum_id += variable_byte_decode(record.get_doc_id())[0]
-            record = record.get_child()
-        return record
-
-    def search_cell_gamma(self, term, doc_id):
-        record = self.table[term][0]
-        if gamma_decode(record.get_doc_id())[0] > doc_id:
-            return record, gamma_decode(record.get_doc_id())[0]
-        if self.table[term][2] <= doc_id:
-            return self.table[term][3], self.table[term][2]
-        sum_id = gamma_decode(record.get_doc_id())[0]
-        while record:
-            if record.get_child() and gamma_decode(record.get_child().get_doc_id())[0] + sum_id > doc_id:
-                return record, sum_id
-            if not record.get_child():
-                return record, sum_id
-            sum_id += gamma_decode(record.get_doc_id())[0]
+            sum_id += record.get_doc_id()
             record = record.get_child()
         return record
 
     def get_all_occurrences(self, term):
         if term in self.table:
             return self.table[term][0]
+        return False
 
     def get_all_records(self):
         lines = []
         for term in self.table:
             current_cell = self.table[term][0]
             current_line = [term]
-            while current_cell:
-                current_line.append(current_cell.get_doc_id())
-                if self.is_vb or self.is_gamma:
+            if self.is_gamma:
+                doc_ids = []
+                current_line.append("")
+                while current_cell:
+                    doc_ids += gamma_encode(current_cell.get_doc_id())
                     current_line.append(current_cell.get_positions())
-                else:
-                    for i in current_cell.get_positions():
-                        current_line.append(i)
-                    current_line.append(-1)
-                current_cell = current_cell.get_child()
-            lines.append(current_line)
+                    current_cell = current_cell.get_child()
+                current_line[1] = binary_to_str(doc_ids)
+                lines.append(current_line)
+            else:
+                while current_cell:
+                    current_line.append(current_cell.get_doc_id())
+                    if self.is_vb or self.is_gamma:
+                        current_line.append(current_cell.get_positions())
+                    else:
+                        for i in current_cell.get_positions():
+                            current_line.append(i)
+                        current_line.append(-1)
+                    current_cell = current_cell.get_child()
+                lines.append(current_line)
         return lines
 
 
@@ -266,7 +289,7 @@ def insert_index(index_table, doc_list, offset):
             print(doc_id)
         for item_position in range(len(doc_list[doc_id])):
             term = doc_list[doc_id][item_position]
-            index_table.add_record(term, doc_id + offset + 1, item_position)
+            index_table.add_record(term, doc_id + offset, item_position)
     return index_table
 
 
@@ -276,7 +299,7 @@ def delete_index(index_table, doc_list, offset):
         for term in doc_list[doc_id]:
             if term not in term_list:
                 term_list.append(term)
-        index_table.delete_record(doc_id + offset + 1, term_list)
+        index_table.delete_record(doc_id + offset, term_list)
     return index_table
 
 
@@ -284,7 +307,7 @@ def insert_bigram_index(index_table, doc_list, offset):
     for doc_id in range(len(doc_list)):
         for item_position in range(len(doc_list[doc_id]) - 1):
             term = doc_list[doc_id][item_position] + " " + doc_list[doc_id][item_position + 1]
-            index_table.add_record(term, doc_id + offset + 1, item_position)
+            index_table.add_record(term, doc_id + offset, item_position)
     return index_table
 
 
@@ -295,21 +318,22 @@ def delete_bigram_index(index_table, doc_list, offset):
             term = doc_list[doc_id][term_index] + " " + doc_list[doc_id][term_index + 1]
             if term not in term_list:
                 term_list.append(term)
-        index_table.delete_record(doc_id + offset + 1, term_list)
+        index_table.delete_record(doc_id + offset, term_list)
     return index_table
 
 
 def save_to_file(index_table, filename):
-    with open(filename, 'w', newline='', encoding="utf-8") as f:
+    with open(filename, 'w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f, delimiter=',')
         for row in index_table.get_all_records():
             writer.writerow(row)
 
 
-def read_from_file(filename):
-    with open(filename, 'r', newline='', encoding="utf-8") as f:
-        reader = csv.reader(f, delimiter=',')
-        lines = []
-        for row in reader:
+def read_from_file(filename, is_vb, is_gamma):
+    reader = csv.reader(codecs.open(filename, 'r', 'utf-8'), delimiter=',')
+    lines = []
+    for row in reader:
+        print(row)
+        if row:
             lines.append(row)
-        return IndexTable(lines, False, False)
+    return IndexTable(lines, is_vb, is_gamma)

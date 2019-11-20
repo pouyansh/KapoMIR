@@ -1,4 +1,5 @@
 def variable_byte_encode(m):
+    m += 2
     bytes_list = ""
     if m == 0:
         bytes_list += chr(128)
@@ -35,13 +36,14 @@ def variable_byte_decode(byte_list):
         temp_int = temp_int * 128 + ord(byte_list[counter])
         if ord(byte_list[counter]) >= 128:
             temp_int -= 128
-            output.append(temp_int)
+            output.append(temp_int - 2)
             temp_int = 0
         counter += 1
     return output
 
 
 def gamma_encode(m):
+    m += 2
     binary = int_to_binary(m)
     length = len(binary) - 1
     output_binary = [1 for _ in range(length)]
@@ -67,7 +69,7 @@ def gamma_decode(s):
             element *= 2
             element += whole_binary[counter]
             counter += 1
-        outputs.append(element)
+        outputs.append(element - 2)
     return list(reversed(outputs))
 
 
@@ -79,13 +81,6 @@ def int_to_binary(m):
         binary.append(m % 2)
         m = int(m / 2)
     return binary
-
-
-def str_to_int(s):
-    output = 0
-    for c in s:
-        output = output * 128 + ord(c)
-    return output
 
 
 def binary_to_str(binary):
