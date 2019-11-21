@@ -16,24 +16,31 @@ class TermList:
         self.parent = parent
         self.child = child
         self.last_position = position
-
-    def set_child(self, child):
-        self.child = child
-
-    def set_parent(self, parent):
-        self.parent = parent
+        self.frequency = 1
 
     def get_child(self):
         return self.child
 
+    def set_child(self, child):
+        self.child = child
+
+    def get_parent(self):
+        return self.parent
+
+    def set_parent(self, parent):
+        self.parent = parent
+
     def get_doc_id(self):
         return self.doc_id
+
+    def set_doc_id(self, doc_id):
+        self.doc_id = doc_id
 
     def get_positions(self):
         return self.positions
 
-    def get_parent(self):
-        return self.parent
+    def set_positions(self, positions):
+        self.positions = positions
 
     def add_position(self, position, is_vb, is_gamma):
         if is_vb:
@@ -48,12 +55,13 @@ class TermList:
         else:
             self.positions.append(position)
         self.last_position = position
+        self.frequency += 1
 
-    def set_positions(self, positions):
-        self.positions = positions
+    def set_frequency(self, frequency):
+        self.frequency = frequency
 
-    def set_doc_id(self, doc_id):
-        self.doc_id = doc_id
+    def get_frequency(self):
+        return self.frequency
 
 
 class IndexTable:
@@ -73,37 +81,10 @@ class IndexTable:
         return self.is_gamma
 
     def read_from_file(self, lines):
-        if self.is_vb or self.is_gamma:
-            for line in lines:
-                term = line[0]
-                counter = 1
-                temp_term_list = None
-                while counter < len(line):
-                    doc_id = line[counter]
-                    positions = line[counter + 1]
-                    if self.is_vb:
-                        doc_id_num = variable_byte_decode(doc_id)[0]
-                        positions = variable_byte_decode(positions)
-                    else:
-                        doc_id_num = gamma_decode(doc_id)[0]
-                        positions = gamma_decode(positions)
-                    counter += 2
-                    for position in positions:
-                        if term not in self.table:
-                            new_term = TermList(doc_id_num, position, None, None, self.is_vb, self.is_gamma)
-                            new_term.set_positions(positions)
-                            self.table[term] = [new_term]
-                            self.table[term].append(1)
-                            self.table[term].append(doc_id_num)
-                            self.table[term].append(new_term)
-                            temp_term_list = new_term
-                        else:
-                            new_term = TermList(doc_id_num, position, temp_term_list, None, self.is_vb, self.is_gamma)
-                            temp_term_list.set_child(new_term)
-                            self.table[term][1] += 1
-                            self.table[term][2] += doc_id_num
-                            self.table[term][3] = new_term
-                            temp_term_list = new_term
+        if self.is_vb:
+            self.read_from_file_variable_byte(lines)
+        elif self.is_gamma:
+            self.read_from_file_gamma(lines)
         else:
             for line in lines:
                 term = line[0]
@@ -130,10 +111,29 @@ class IndexTable:
                 temp_term_list = self.insert_all_doc_occurrences(term, doc_id, positions, temp_term_list)
                 counter += 1
 
+    def read_from_file_variable_byte(self, lines):
+        for line in lines:
+            term = line[0]
+            doc_id = variable_byte_decode(line[1])
+            temp_term_list = self.create_term(term, doc_id, line[2])
+            counter = 3
+            while counter < len(line):
+                doc_id = variable_byte_decode(line[counter])
+                positions = line[counter + 1]
+                counter += 1
+                temp_term_list = self.insert_all_doc_occurrences(term, doc_id, positions, temp_term_list)
+                counter += 1
+
     # For case when no TermList for term exists in the dictionary. Creates a TermList and adds it to the dictionary.
     def create_term(self, term, doc_id, positions):
         new_term = TermList(doc_id, 0, None, None, self.is_vb, self.is_gamma)
         new_term.set_positions(positions)
+        if self.is_vb:
+            positions = variable_byte_decode(positions)
+            new_term.set_frequency(len(positions))
+        elif self.is_gamma:
+            positions = gamma_decode(positions)
+            new_term.set_frequency(len(positions))
         self.table[term] = [new_term]
         self.table[term].append(1)
         self.table[term].append(doc_id)
@@ -165,6 +165,7 @@ class IndexTable:
         # linked list
         if previous_id == self.table[term][0].get_doc_id() > doc_id:
             new_term = TermList(doc_id, position, None, previous_term, self.is_vb, self.is_gamma)
+            self.table[term][1] += 1
             if self.is_vb or self.is_gamma:
                 previous_term.set_doc_id(previous_id - doc_id)
             self.table[term][0] = new_term
@@ -175,6 +176,7 @@ class IndexTable:
         child = previous_term.get_child()
         if self.is_vb or self.is_gamma:
             new_term = TermList(doc_id - previous_id, position, previous_term, child, self.is_vb, self.is_gamma)
+            self.table[term][1] += 1
             if child:
                 child.set_doc_id(child.get_doc_id() - (doc_id - previous_id))
         else:
@@ -281,6 +283,21 @@ class IndexTable:
                     current_cell = current_cell.get_child()
                 lines.append(current_line)
         return lines
+
+    def get_dictionary(self, term):
+        if term not in self.table:
+            return None
+        term_list = self.table[term]
+        output = {}
+        doc_id = term_list.get_doc_id()
+        output[doc_id] = [term_list.get_frequency()]
+        term_list = term_list.get_child()
+        while term_list:
+            if self.is_gamma or self.is_vb:
+                doc_id += term_list.get_doc_id()
+            else:
+                doc_id = term_list.get_doc_id()
+            output[doc_id] = [term_list.get_frequency()]
 
 
 def insert_index(index_table, doc_list, offset):
