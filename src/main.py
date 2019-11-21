@@ -1,4 +1,6 @@
 import importlib
+
+from src.Proximity import proximity_search
 from src.input_reader import *
 from src.preprocess import *
 from src.indexing import *
@@ -35,14 +37,10 @@ def main():
 
     # get input and search the term
     while True:
-        term = input("Enter a word: ")
-        term = english_preprocess(term)[0]
-        element = index_table.get_all_occurrences(term)
-        doc_id = 0
-        while element:
-            doc_id += element.get_doc_id()
-            print("document id: ", doc_id, "\tpositions: ", gamma_decode(element.get_positions()))
-            element = element.get_child()
+        terms = input("Enter a word: ")
+        query = english_preprocess(terms)
+        window = int(input("Enter the window size: "))
+        print(proximity_search(query, index_table, window))
 
 
 if __name__ == "__main__":
