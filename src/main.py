@@ -1,12 +1,7 @@
-import importlib
-
-from src.Proximity import proximity_search
 from src.input_reader import *
 from src.preprocess import *
 from src.indexing import *
-import sys
-
-from src.utilities import variable_byte_decode, variable_byte_encode
+from src.search import search_english_query
 
 
 def main():
@@ -15,9 +10,9 @@ def main():
     persian_documents = read_xml(
         '../raw-database/Persian.xml', '{http://www.mediawiki.org/xml/export-0.10/}')
     english_documents = read_csv('../raw-database/English.csv')
-    for i in range(100):
+    for i in range(10):
         token_list_persian.append(persian_preprocess(persian_documents[i]))
-    for i in range(100):
+    for i in range(20):
         # feed in the body of documents index 1
         token_list_english.append(english_preprocess(english_documents[i][1]))
 
@@ -26,21 +21,47 @@ def main():
     preprocessed_english = stopwords(token_list_english)
 
     # creating indexing tables
-    index_table = insert_index(IndexTable([], False, True), preprocessed_persian, 1)
+    index_table = insert_index(IndexTable([], False, True), preprocessed_persian, 0)
     index_table = insert_index(index_table, preprocessed_english, len(preprocessed_persian))
-
+    #
     # creating bigram indexing tables
-    index_table = insert_bigram_index(index_table, preprocessed_persian, 1)
+    index_table = insert_bigram_index(index_table, preprocessed_persian, 0)
     index_table = insert_bigram_index(index_table, preprocessed_english, len(preprocessed_persian))
-    save_to_file(index_table, "../output/index_table_gamma_2.csv")
-    # index_table = read_from_file("../output/index_table_gamma_2.csv", False, True)
+    save_to_file(index_table, "../output/index_table_gamma.txt")
+    index_table = read_from_file("../output/index_table_gamma.txt", False, True)
 
     # get input and search the term
+    # while True:
+    #     term = input("Enter a word: ")
+    #     term = english_preprocess(term)[0]
+    #     element = index_table.get_all_occurrences(term)
+    #     doc_id = 0
+    #     while element:
+    #         doc_id += gamma_decode(element.get_doc_id())[0]
+    #         print("document id: ", doc_id, "\tpositions: ", gamma_decode(element.get_positions()))
+    #         element = element.get_child()
+    
     while True:
-        terms = input("Enter a word: ")
-        query = english_preprocess(terms)
-        window = int(input("Enter the window size: "))
-        print(proximity_search(query, index_table, window))
+        term = input("Enter a query: ")
+        # term = input("Enter a word: ")
+        # element = index_table.get_all_occurrences(term)
+        # if not element:
+        #     print('not found')
+        #     closest_words = find_closest_words(index_table, term)
+        #     if len(closest_words) == 0:
+        #         print('no close words found!')
+        #     else:
+        #         print('did you mean :')
+        #         for word in closest_words:
+        #             print(word)
+        # else:
+        #     doc_id = 0
+        #     while element:
+        #         print("document id: ", element.get_doc_id(), "\tpositions: ", element.get_positions())
+        #         element = element.get_child()
+        # search_english_query(term, index_table, 1001)
+        search_english_query(term, index_table, 100)
+        # 1572 persian docs
 
 
 if __name__ == "__main__":

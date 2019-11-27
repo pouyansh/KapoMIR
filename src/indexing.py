@@ -94,9 +94,9 @@ class IndexTable:
                     if str(line[counter]) == "-1":
                         if counter + 1 < len(line):
                             doc_id = line[counter + 1]
-                        counter += 1
+                        counter += 2
                         continue
-                    self.add_record(term, doc_id, line[counter])
+                    self.add_record(term, doc_id, int(line[counter]))
                     counter += 1
 
     def read_from_file_gamma(self, lines):
@@ -193,6 +193,8 @@ class IndexTable:
                 position = variable_byte_encode(position)
             elif self.is_gamma:
                 position = binary_to_str(gamma_encode(position))
+            else:
+                position = [position]
             self.create_term(term, doc_id, position)
         else:
             self.table[term][1] += 1
@@ -287,7 +289,7 @@ class IndexTable:
     def get_dictionary(self, term):
         if term not in self.table:
             return None
-        term_list = self.table[term]
+        term_list = self.table[term][0]
         output = {}
         doc_id = term_list.get_doc_id()
         output[doc_id] = [term_list.get_frequency()]
@@ -298,12 +300,13 @@ class IndexTable:
             else:
                 doc_id = term_list.get_doc_id()
             output[doc_id] = [term_list.get_frequency()]
+            term_list = term_list.get_child()
+        return output
 
 
 def insert_index(index_table, doc_list, offset):
     for doc_id in range(len(doc_list)):
-        if doc_id % 100 == 0:
-            print(doc_id)
+        print(doc_id)
         for item_position in range(len(doc_list[doc_id])):
             term = doc_list[doc_id][item_position]
             index_table.add_record(term, doc_id + offset, item_position)
@@ -340,17 +343,16 @@ def delete_bigram_index(index_table, doc_list, offset):
 
 
 def save_to_file(index_table, filename):
-    with open(filename, 'w', newline='', encoding='utf-8') as f:
+    with open(filename, 'w+b') as f:
         writer = csv.writer(f, delimiter=',')
         for row in index_table.get_all_records():
             writer.writerow(row)
 
 
 def read_from_file(filename, is_vb, is_gamma):
-    reader = csv.reader(codecs.open(filename, 'r', 'utf-8'), delimiter=',')
+    reader = csv.reader(codecs.open(filename, 'rb', 'utf-8'), delimiter=',')
     lines = []
     for row in reader:
-        print(row)
         if row:
             lines.append(row)
     return IndexTable(lines, is_vb, is_gamma)

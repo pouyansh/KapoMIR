@@ -19,7 +19,7 @@ def delete_persian_stop_words(list):
     stop_words = '،!?'
     output = []
     for token in list:
-        if (token in stop_words):
+        if token in stop_words:
             continue
         else:
             output.append(token)
@@ -50,7 +50,7 @@ def delete_english_stop_words(list):
     stop_words = ',!?'
     output = []
     for token in list:
-        if (token in stop_words):
+        if token in stop_words:
             continue
         else:
             output.append(token)
@@ -69,23 +69,36 @@ def english_preprocess(text):
 
 
 def stopwords(terms_list):
-    m = {}
-    for doc in terms_list:
-        for item in doc:
-            if item in m:
-                m[item][0] += 1
-            else:
-                m[item] = [1]
-    m = nltk.OrderedDict(sorted(m.items(), key=lambda t: -t[1][0]))
-    terms_count = 0
-    for i in range(len(terms_list)):
-        terms_count += len(terms_list[i])
-    deleted_terms = []
-    for item in m:
-        if m[item][0] >= 0.005 * terms_count:
-            deleted_terms.append(item)
-    output = [list(filter(lambda a: a not in deleted_terms, terms_list[i])) for i in range(len(terms_list))]
-    terms_count = 0
-    for doc in output:
-        terms_count += len(doc)
+    persian_stopwords = [']', '[', '.', 'و', 'در', '{', '}', '|', '=', ':', 'به', 'از', ')', '(', 'که', '*', 'اس',
+                         'این', 'را', '==', '«', '»']
+    english_stopwords = ['the', '.', 'a', 'of', 'to', 'in', 'and', '-', ';', 'on', 'it', 'for', ')', '(', "'s", '#',
+                         'that', 'reuter', 'as', '39', 'with', 'at', 'by']
+    deleted_terms = persian_stopwords + english_stopwords
+    output = []
+    for term in terms_list:
+        if term in deleted_terms:
+            continue
+        else:
+            output.append(term)
+    # m = {}
+    # for doc in terms_list:
+    #     for item in doc:
+    #         if item in m:
+    #             m[item][0] += 1
+    #         else:
+    #             m[item] = [1]
+    # m = nltk.OrderedDict(sorted(m.items(), key=lambda t: -t[1][0]))
+    # terms_count = 0
+    # for i in range(len(terms_list)):
+    #     terms_count += len(terms_list[i])
+    # deleted_terms = []
+    # for item in m:
+    # if m[item][0] >= 0.005 * terms_count:
+    # print(item, m[item][0])
+    # deleted_terms.append(item)
+    # print(deleted_terms)
+    # output = [list(filter(lambda a: a not in deleted_terms, terms_list[i])) for i in range(len(terms_list))]
+    # terms_count = 0
+    # for doc in output:
+    #     terms_count += len(doc)
     return output
