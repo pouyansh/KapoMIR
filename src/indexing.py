@@ -1,5 +1,6 @@
-import codecs
+import base64
 import csv
+import sys
 
 from src.utilities import *
 
@@ -266,7 +267,7 @@ class IndexTable:
             current_line = [term]
             if self.is_gamma:
                 doc_ids = []
-                current_line.append("")
+                current_line.append('')
                 while current_cell:
                     doc_ids += gamma_encode(current_cell.get_doc_id())
                     current_line.append(current_cell.get_positions())
@@ -325,6 +326,7 @@ def delete_index(index_table, doc_list, offset):
 
 def insert_bigram_index(index_table, doc_list, offset):
     for doc_id in range(len(doc_list)):
+        print(doc_id)
         for item_position in range(len(doc_list[doc_id]) - 1):
             term = doc_list[doc_id][item_position] + " " + doc_list[doc_id][item_position + 1]
             index_table.add_record(term, doc_id + offset, item_position)
@@ -343,16 +345,31 @@ def delete_bigram_index(index_table, doc_list, offset):
 
 
 def save_to_file(index_table, filename):
-    with open(filename, 'w+b') as f:
-        writer = csv.writer(f, delimiter=',')
+    with open(filename, 'wt', encoding='utf-8', newline='') as f:
         for row in index_table.get_all_records():
-            writer.writerow(row)
+            data = row[0]
+            counter = 1
+            while counter < len(row):
+                s = str(base64.b64encode(row[counter].encode('utf-8')))
+                s = s[2:-1]
+                data += "," + s
+                counter += 1
+            f.write(data + '\n')
 
 
 def read_from_file(filename, is_vb, is_gamma):
-    reader = csv.reader(codecs.open(filename, 'rb', 'utf-8'), delimiter=',')
-    lines = []
-    for row in reader:
-        if row:
-            lines.append(row)
+    csv.field_size_limit(sys.maxsize)
+    with open(filename, 'rt', encoding='utf-8') as f:
+        rows = f.read().split('\n')
+        lines = []
+        for line in rows:
+            if line:
+                row = line.split(',')
+                data = [row[0]]
+                counter = 1
+                while counter < len(row):
+                    s = base64.b64decode(row[counter]).decode('utf-8')
+                    data.append(s)
+                    counter += 1
+                lines.append(data)
     return IndexTable(lines, is_vb, is_gamma)

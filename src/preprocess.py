@@ -7,6 +7,9 @@ ps = PorterStemmer()
 
 
 def persian_normalizer(text):
+    stop_words = '،!?\'<>-_+=,'
+    for c in stop_words:
+        text = text.replace(c, ' ')
     hazm_normalizer = hazm.Normalizer()
     return hazm_normalizer.normalize(text)
 
@@ -39,6 +42,9 @@ def persian_preprocess(text):
 
 
 def english_normalizer(text):
+    stop_words = '،!?\'<>-_+=,'
+    for c in stop_words:
+        text = text.replace(c, ' ')
     return text.lower()
 
 

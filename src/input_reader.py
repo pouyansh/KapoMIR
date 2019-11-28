@@ -17,5 +17,8 @@ def read_csv(path):
     with open(path, 'r') as csv_file:
         csv_reader = csv.reader(csv_file)
         for line in csv_reader:
-            documents.append(line)
+            temp_line = ""
+            for l in line:
+                temp_line += l
+            documents.append(temp_line)
     return documents

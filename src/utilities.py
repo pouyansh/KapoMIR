@@ -42,17 +42,21 @@ def variable_byte_decode(byte_list):
 
 
 def gamma_encode(m):
+    m += 1
     binary = int_to_binary(m)
     length = len(binary) - 1
     output_binary = [1 for _ in range(length)]
     output_binary.append(0)
     for i in range(len(binary) - 1):
         output_binary.append(binary[len(binary) - 2 - i])
-    return list(reversed(output_binary))
+    output = list(reversed(output_binary))
+    return output
 
 
-def gamma_decode(s):
+def gamma_decode(s, check=False):
     whole_binary = str_to_binary(s)
+    if check:
+        whole_binary = whole_binary[:-1]
     whole_binary = list(reversed(whole_binary))
     outputs = []
     counter = 0
@@ -67,7 +71,7 @@ def gamma_decode(s):
             element *= 2
             element += whole_binary[counter]
             counter += 1
-        outputs.append(element)
+        outputs.append(element - 1)
     return list(reversed(outputs))
 
 
