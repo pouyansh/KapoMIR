@@ -8,7 +8,6 @@ def proximity_search(query, index_table, window, is_vb, is_gamma):
             return []
     term_lists = [index_table.get_all_occurrences(q) for q in query]
     term_lists_doc_ids = [term_list.get_doc_id() for term_list in term_lists]
-    print(term_lists_doc_ids)
     output_doc_ids = []
     while True:
         current_max = max(term_lists_doc_ids)
@@ -18,7 +17,10 @@ def proximity_search(query, index_table, window, is_vb, is_gamma):
                 term_lists[i] = term_lists[i].get_child()
                 if term_lists[i] is None:
                     return output_doc_ids
-                term_lists_doc_ids[i] += term_lists[i].get_doc_id()
+                if is_vb or is_gamma:
+                    term_lists_doc_ids[i] += term_lists[i].get_doc_id()
+                else:
+                    term_lists_doc_ids[i] = term_lists[i].get_doc_id()
             if term_lists_doc_ids[i] > current_max:
                 check_not_equal = True
         if check_not_equal:
@@ -28,7 +30,10 @@ def proximity_search(query, index_table, window, is_vb, is_gamma):
         if term_lists[0].get_child() is None:
             return output_doc_ids
         term_lists[0] = term_lists[0].get_child()
-        term_lists_doc_ids[0] += term_lists[0].get_doc_id()
+        if is_vb or is_gamma:
+            term_lists_doc_ids[0] += term_lists[0].get_doc_id()
+        else:
+            term_lists_doc_ids[0] = term_lists[0].get_doc_id()
 
 
 def proximity_search_in_doc(term_lists, window, is_vb, is_gamma):
@@ -37,7 +42,7 @@ def proximity_search_in_doc(term_lists, window, is_vb, is_gamma):
     elif is_vb:
         all_positions = [variable_byte_decode(term_list.get_positions()) for term_list in term_lists]
     else:
-        all_positions = [term_list.get_positions() for term_list in term_lists]
+        all_positions = [[p for p in term_list.get_positions()] for term_list in term_lists]
     current_positions = [positions[0] for positions in all_positions]
     while True:
         min_position = min(current_positions)

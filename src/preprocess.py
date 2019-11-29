@@ -102,16 +102,16 @@ def stopwords(terms_list, check=False, stopwords_list=[]):
         for i in range(len(terms_list)):
             terms_count += len(terms_list[i])
         deleted_terms = stopwords_list
-        output = []
+        for item in m:
+            if m[item][0] >= 0.005 * terms_count:
+                print(item, m[item][0])
+                deleted_terms.append(item)
+            else:
+                break
         with open("../output/stopwords.csv", 'w', encoding='utf-8', newline='') as f:
             writer = csv.writer(f)
-            for item in m:
-                if m[item][0] >= 0.005 * terms_count:
-                    print(item, m[item][0])
-                    writer.writerow(item)
-                deleted_terms.append(item)
-                output = [list(filter(lambda a: a not in deleted_terms, terms_list[i])) for i in range(len(terms_list))]
-                print(item)
+            writer.writerow(deleted_terms)
+        output = [list(filter(lambda a: a not in deleted_terms, terms_list[i])) for i in range(len(terms_list))]
     else:
         output = []
         with open("../output/stopwords.csv", 'r', encoding='utf-8', newline='') as f:

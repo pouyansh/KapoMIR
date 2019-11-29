@@ -18,8 +18,8 @@ def main():
         token_list_english.append(english_preprocess(english_documents[i]))
 
     # removing stopwords from term lists
-    preprocessed_persian, stopwords_list = stopwords(token_list_persian, True, [])
-    preprocessed_english, stopwords_list = stopwords(token_list_english, True, stopwords_list)
+    preprocessed_persian, stopwords_list = stopwords(token_list_persian, False, [])
+    preprocessed_english, stopwords_list = stopwords(token_list_english, False, stopwords_list)
     #
     # # creating indexing tables
     # index_table = insert_index(IndexTable([], False, False), preprocessed_persian, 1)
