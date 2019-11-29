@@ -1,9 +1,14 @@
-from utilities import gamma_decode
+from src.utilities import *
 
 
-def proximity_search(query, index_table, window):
+def proximity_search(query, index_table, window, is_vb, is_gamma):
+    for term in query:
+        if not index_table.get_all_occurrences(term):
+            print(term)
+            return []
     term_lists = [index_table.get_all_occurrences(q) for q in query]
     term_lists_doc_ids = [term_list.get_doc_id() for term_list in term_lists]
+    print(term_lists_doc_ids)
     output_doc_ids = []
     while True:
         current_max = max(term_lists_doc_ids)
@@ -18,7 +23,7 @@ def proximity_search(query, index_table, window):
                 check_not_equal = True
         if check_not_equal:
             continue
-        if proximity_search_in_doc(term_lists, window):
+        if proximity_search_in_doc(term_lists, window, is_vb, is_gamma):
             output_doc_ids.append(current_max)
         if term_lists[0].get_child() is None:
             return output_doc_ids
@@ -26,8 +31,13 @@ def proximity_search(query, index_table, window):
         term_lists_doc_ids[0] += term_lists[0].get_doc_id()
 
 
-def proximity_search_in_doc(term_lists, window):
-    all_positions = [gamma_decode(term_list.get_positions()) for term_list in term_lists]
+def proximity_search_in_doc(term_lists, window, is_vb, is_gamma):
+    if is_gamma:
+        all_positions = [gamma_decode(term_list.get_positions()) for term_list in term_lists]
+    elif is_vb:
+        all_positions = [variable_byte_decode(term_list.get_positions()) for term_list in term_lists]
+    else:
+        all_positions = [term_list.get_positions() for term_list in term_lists]
     current_positions = [positions[0] for positions in all_positions]
     while True:
         min_position = min(current_positions)

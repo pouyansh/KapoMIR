@@ -1,8 +1,6 @@
-import base64
 import csv
-import sys
 
-from utilities import *
+from src.utilities import *
 
 
 class TermList:
@@ -54,7 +52,8 @@ class TermList:
                 p += gamma_encode(num)
             self.positions = binary_to_str(p)
         else:
-            self.positions.append(position)
+            if position not in self.positions:
+                self.positions.append(position)
         self.last_position = position
         self.frequency += 1
 
@@ -103,23 +102,33 @@ class IndexTable:
     def read_from_file_gamma(self, lines):
         for line in lines:
             term = line[0]
-            doc_ids = gamma_decode(line[1])
-            temp_term_list = self.create_term(term, doc_ids[0], line[2])
+            doc_id = line[1]
+            length = line[2]
+            positions = []
             counter = 3
-            while counter < len(line):
-                doc_id = doc_ids[counter - 2]
-                positions = line[counter]
-                temp_term_list = self.insert_all_doc_occurrences(term, doc_id, positions, temp_term_list)
+            for i in range(length):
+                positions += gamma_encode(line[counter])
                 counter += 1
+            temp_term_list = self.create_term(term, doc_id, binary_to_str(positions))
+            while counter < len(line):
+                doc_id = line[counter]
+                counter += 1
+                length = line[counter]
+                counter += 1
+                positions = []
+                for i in range(length):
+                    positions += gamma_encode(line[counter])
+                    counter += 1
+                temp_term_list = self.insert_all_doc_occurrences(term, doc_id, positions, temp_term_list)
 
     def read_from_file_variable_byte(self, lines):
         for line in lines:
             term = line[0]
-            doc_id = variable_byte_decode(line[1])
+            doc_id = line[1]
             temp_term_list = self.create_term(term, doc_id, line[2])
             counter = 3
             while counter < len(line):
-                doc_id = variable_byte_decode(line[counter])
+                doc_id = line[counter]
                 positions = line[counter + 1]
                 counter += 1
                 temp_term_list = self.insert_all_doc_occurrences(term, doc_id, positions, temp_term_list)
@@ -198,7 +207,6 @@ class IndexTable:
                 position = [position]
             self.create_term(term, doc_id, position)
         else:
-            self.table[term][1] += 1
             previous_term, previous_doc_id = self.search_cell(term, doc_id)
             self.insert_term_list_in_dictionary(term, doc_id, position, previous_term, previous_doc_id)
 
@@ -219,7 +227,7 @@ class IndexTable:
                         record.get_child().set_parent(record.get_parent())
                     else:
                         self.table[term][3] = record.get_parent()
-                self.table[term][1] -= 1
+                    self.table[term][1] -= 1
 
     def search_cell(self, term, doc_id):
         if self.is_vb or self.is_gamma:
@@ -258,34 +266,59 @@ class IndexTable:
     def get_all_occurrences(self, term):
         if term in self.table:
             return self.table[term][0]
-        return False
+        return None
 
-    def get_all_records(self):
+    def get_all_records(self, filename_indexes):
         lines = []
-        for term in self.table:
-            current_cell = self.table[term][0]
-            current_line = [term]
-            if self.is_gamma:
-                doc_ids = []
-                current_line.append('')
+        terms = []
+
+        if self.is_gamma:
+            for term in self.table:
+                terms.append(term)
+                current_cell = self.table[term][0]
+                data = []
                 while current_cell:
-                    doc_ids += gamma_encode(current_cell.get_doc_id())
-                    current_line.append(current_cell.get_positions())
+                    data += gamma_encode(current_cell.get_doc_id())
+                    positions = gamma_decode(current_cell.get_positions())
+                    data += gamma_encode(len(positions))
+                    for p in positions:
+                        data += gamma_encode(p)
                     current_cell = current_cell.get_child()
-                current_line[1] = binary_to_str(doc_ids)
-                lines.append(current_line)
-            else:
+                data += [1]
+                try:
+                    with open(filename_indexes + term, 'wb') as f:
+                        f.write(binary_to_str(data).encode('utf-8'))
+                except OSError:
+                    pass
+        elif self.is_vb:
+            data = ""
+            for term in self.table:
+                terms.append(term)
+                current_cell = self.table[term][0]
+                df = self.table[term][1]
+                data += variable_byte_encode(df)
+                while current_cell:
+                    data += variable_byte_encode(current_cell.get_doc_id())
+                    positions = variable_byte_decode(current_cell.get_positions())
+                    length = len(positions)
+                    data += variable_byte_encode(length)
+                    data += current_cell.get_positions()
+                    current_cell = current_cell.get_child()
+            with open(filename_indexes, 'wb') as f:
+                f.write(data.encode('utf-8'))
+        else:
+            for term in self.table:
+                current_cell = self.table[term][0]
+                current_line = [term]
                 while current_cell:
                     current_line.append(current_cell.get_doc_id())
-                    if self.is_vb or self.is_gamma:
-                        current_line.append(current_cell.get_positions())
-                    else:
-                        for i in current_cell.get_positions():
-                            current_line.append(i)
-                        current_line.append(-1)
+                    for i in current_cell.get_positions():
+                        current_line.append(i)
+                    current_line.append(-1)
                     current_cell = current_cell.get_child()
                 lines.append(current_line)
-        return lines
+                terms.append(terms)
+        return terms, lines
 
     def get_dictionary(self, term):
         if term not in self.table:
@@ -304,14 +337,30 @@ class IndexTable:
             term_list = term_list.get_child()
         return output
 
+    def get_posting_list(self, term):
+        if term not in self.table:
+            return None
+        term_list = self.table[term][0]
+        output = []
+        doc_id = term_list.get_doc_id()
+        output.append(doc_id)
+        term_list = term_list.get_child()
+        while term_list:
+            if self.is_gamma or self.is_vb:
+                doc_id += term_list.get_doc_id()
+            else:
+                doc_id = term_list.get_doc_id()
+            output.append(doc_id)
+            term_list = term_list.get_child()
+        return output
+
 
 def insert_index(index_table, doc_list, offset):
     for doc_id in range(len(doc_list)):
-        print(doc_id)
         for item_position in range(len(doc_list[doc_id])):
             term = doc_list[doc_id][item_position]
             index_table.add_record(term, doc_id + offset, item_position)
-    return index_table
+    return insert_bigram_index(index_table, doc_list, offset)
 
 
 def delete_index(index_table, doc_list, offset):
@@ -321,12 +370,13 @@ def delete_index(index_table, doc_list, offset):
             if term not in term_list:
                 term_list.append(term)
         index_table.delete_record(doc_id + offset, term_list)
-    return index_table
+    return delete_bigram_index(index_table, doc_list, offset)
 
 
 def insert_bigram_index(index_table, doc_list, offset):
     for doc_id in range(len(doc_list)):
-        print(doc_id)
+        if doc_id % 100 == 0:
+            print(doc_id)
         for item_position in range(len(doc_list[doc_id]) - 1):
             term = doc_list[doc_id][item_position] + " " + doc_list[doc_id][item_position + 1]
             index_table.add_record(term, doc_id + offset, item_position)
@@ -344,32 +394,74 @@ def delete_bigram_index(index_table, doc_list, offset):
     return index_table
 
 
-def save_to_file(index_table, filename):
-    with open(filename, 'wt', encoding='utf-8', newline='') as f:
-        for row in index_table.get_all_records():
-            data = row[0]
-            counter = 1
-            while counter < len(row):
-                s = str(base64.b64encode(row[counter].encode('utf-8')))
-                s = s[2:-1]
-                data += "," + s
+def save_to_file(index_table, filename_words, filename_indexes):
+    data_words, data_indexes = index_table.get_all_records(filename_indexes)
+    if index_table.get_is_gamma() or index_table.get_is_vb():
+        with open(filename_words, 'w', encoding='utf-8', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(data_words)
+    else:
+        with open(filename_indexes, 'w', encoding='utf-8', newline='') as f:
+            writer = csv.writer(f)
+            for row in data_indexes:
+                writer.writerow(row)
+
+
+def read_from_file(filename_words, filename_indexes, is_vb, is_gamma):
+    data_words = []
+    final_lines = []
+    if is_vb or is_gamma:
+        with open(filename_words, 'r', encoding='utf-8', newline='') as f:
+            reader = csv.reader(f)
+            for row in reader:
+                data_words += row
+    if is_gamma:
+        counter = 0
+        for word in data_words:
+            counter += 1
+            if counter % 1000 == 0:
+                print(counter)
+            try:
+                with open(filename_indexes + word, 'rb') as f:
+                    rows = f.read().decode('utf-8')
+                    lines = [word] + gamma_decode(rows, True)
+                final_lines.append(lines)
+            except OSError:
+                pass
+    elif is_vb:
+        with open(filename_indexes, 'rb') as f:
+            data = f.read().decode('utf-8')
+            values = variable_byte_decode(data)
+            counter = 0
+            cnt_terms = 0
+            while counter < len(values):
+                line = [data_words[cnt_terms]]
+                cnt_terms += 1
+                df = values[counter]
                 counter += 1
-            f.write(data + '\n')
-
-
-def read_from_file(filename, is_vb, is_gamma):
-    csv.field_size_limit(sys.maxsize)
-    with open(filename, 'rt', encoding='utf-8') as f:
-        rows = f.read().split('\n')
-        lines = []
-        for line in rows:
-            if line:
-                row = line.split(',')
-                data = [row[0]]
-                counter = 1
-                while counter < len(row):
-                    s = base64.b64decode(row[counter]).decode('utf-8')
-                    data.append(s)
+                cnt = 0
+                while cnt < df:
+                    doc_id = values[counter]
+                    line .append(doc_id)
                     counter += 1
-                lines.append(data)
-    return IndexTable(lines, is_vb, is_gamma)
+                    cnt += 1
+                    length = values[counter]
+                    counter += 1
+                    cnt_positions = 0
+                    data_positions = ""
+                    while cnt_positions < length:
+                        try:
+                            data_positions += variable_byte_encode(values[counter])
+                        except IndexError:
+                            print(line, counter, len(values), df, doc_id)
+                        counter += 1
+                        cnt_positions += 1
+                    line.append(data_positions)
+                final_lines.append(line)
+    else:
+        with open(filename_indexes, 'r', encoding='utf-8', newline='') as f:
+            reader = csv.reader(f)
+            for row in reader:
+                line = [row[0]] + [int(row[i]) for i in range(1, len(row))]
+                final_lines.append(line)
+    return IndexTable(final_lines, is_vb, is_gamma)

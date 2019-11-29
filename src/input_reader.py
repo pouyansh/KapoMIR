@@ -19,6 +19,6 @@ def read_csv(path):
         for line in csv_reader:
             temp_line = ""
             for l in line:
-                temp_line += l
+                temp_line += l + " "
             documents.append(temp_line)
-    return documents
+    return documents[1:]
