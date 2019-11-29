@@ -6,21 +6,20 @@ from src.search import *
 
 
 def main():
-    # token_list_persian = []
-    # token_list_english = []
+    token_list_persian = []
+    token_list_english = []
     persian_documents = read_xml(
         '../raw-database/Persian.xml', '{http://www.mediawiki.org/xml/export-0.10/}')
     english_documents = read_csv('../raw-database/English.csv')
-    # print(len(persian_documents), len(english_documents))
-    # for i in range(len(persian_documents)):
-    #     token_list_persian.append(persian_preprocess(persian_documents[i]))
-    # for i in range(len(english_documents)):
-    #     # feed in the body of documents index 1
-    #     token_list_english.append(english_preprocess(english_documents[i]))
-    #
-    # # removing stopwords from term lists
-    # preprocessed_persian = stopwords(token_list_persian)
-    # preprocessed_english = stopwords(token_list_english)
+    for i in range(len(persian_documents)):
+        token_list_persian.append(persian_preprocess(persian_documents[i]))
+    for i in range(len(english_documents)):
+        # feed in the body of documents index 1
+        token_list_english.append(english_preprocess(english_documents[i]))
+
+    # removing stopwords from term lists
+    preprocessed_persian, stopwords_list = stopwords(token_list_persian, True, [])
+    preprocessed_english, stopwords_list = stopwords(token_list_english, True, stopwords_list)
     #
     # # creating indexing tables
     # index_table = insert_index(IndexTable([], False, False), preprocessed_persian, 1)
@@ -106,15 +105,15 @@ def main():
         elif choice == 6:
             doc_id = int(input("Document id: "))
             if doc_id >= 1572:
-                delete_index(index_table, [english_documents[doc_id - 1572]], doc_id)
+                delete_index(index_table, [preprocessed_english[doc_id - 1572]], doc_id)
             else:
-                delete_index(index_table, [persian_documents[doc_id - 1]], doc_id)
+                delete_index(index_table, [preprocessed_persian[doc_id - 1]], doc_id)
         elif choice == 7:
             doc_id = int(input("Document id: "))
             if doc_id >= 1572:
-                insert_index(index_table, [english_documents[doc_id - 1572]], doc_id)
+                insert_index(index_table, [preprocessed_english[doc_id - 1572]], doc_id)
             else:
-                insert_index(index_table, [persian_documents[doc_id]], doc_id)
+                insert_index(index_table, [preprocessed_persian[doc_id - 1]], doc_id)
 
 
 if __name__ == "__main__":

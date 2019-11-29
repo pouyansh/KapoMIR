@@ -52,7 +52,8 @@ class TermList:
                 p += gamma_encode(num)
             self.positions = binary_to_str(p)
         else:
-            self.positions.append(position)
+            if position not in self.positions:
+                self.positions.append(position)
         self.last_position = position
         self.frequency += 1
 
@@ -356,12 +357,10 @@ class IndexTable:
 
 def insert_index(index_table, doc_list, offset):
     for doc_id in range(len(doc_list)):
-        if doc_id % 100 == 0:
-            print(doc_id)
         for item_position in range(len(doc_list[doc_id])):
             term = doc_list[doc_id][item_position]
             index_table.add_record(term, doc_id + offset, item_position)
-    return index_table
+    return insert_bigram_index(index_table, doc_list, offset)
 
 
 def delete_index(index_table, doc_list, offset):

@@ -77,7 +77,7 @@ def english_preprocess(text):
     return english_stemmer(delete_english_stop_words(english_tokenize(english_normalizer(text))))
 
 
-def stopwords(terms_list, check=False):
+def stopwords(terms_list, check=False, stopwords_list=[]):
     # persian_stopwords = [']', '[', '.', 'و', 'در', '{', '}', '|', '=', ':', 'به', 'از', ')', '(', 'که', '*', 'اس',
     #                      'این', 'را', '==', '«', '»']
     # english_stopwords = ['the', '.', 'a', 'of', 'to', 'in', 'and', '-', ';', 'on', 'it', 'for', ')', '(', "'s", '#',
@@ -101,7 +101,7 @@ def stopwords(terms_list, check=False):
         terms_count = 0
         for i in range(len(terms_list)):
             terms_count += len(terms_list[i])
-        deleted_terms = []
+        deleted_terms = stopwords_list
         output = []
         with open("../output/stopwords.csv", 'w', encoding='utf-8', newline='') as f:
             writer = csv.writer(f)
@@ -111,6 +111,7 @@ def stopwords(terms_list, check=False):
                     writer.writerow(item)
                 deleted_terms.append(item)
                 output = [list(filter(lambda a: a not in deleted_terms, terms_list[i])) for i in range(len(terms_list))]
+                print(item)
     else:
         output = []
         with open("../output/stopwords.csv", 'r', encoding='utf-8', newline='') as f:
@@ -119,4 +120,4 @@ def stopwords(terms_list, check=False):
             for row in reader:
                 deleted_terms.append(row[0])
                 output = list(filter(lambda a: a not in deleted_terms, terms_list))
-    return output
+    return output, deleted_terms
