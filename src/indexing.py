@@ -2,7 +2,7 @@ import base64
 import csv
 import sys
 
-from src.utilities import *
+from utilities import *
 
 
 class TermList:

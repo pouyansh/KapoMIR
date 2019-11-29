@@ -1,5 +1,5 @@
-from src.preprocess import *
-from src.edit_distance import *
+from preprocess import *
+from edit_distance import *
 import math
 
 
@@ -74,6 +74,13 @@ def search_query(processed_query, index_table, number_of_docs, is_reading_from_w
         # print(doc_ids)
         # print(doc_vectors)
 
+    for vector in doc_vectors:
+        vector_sum = 0
+        for i in vector:
+            vector_sum += i*i
+        vector_sum = math.sqrt(vector_sum)
+        for i in range(len(vector)):
+            vector[i] = vector[i] / vector_sum
     for vector in doc_vectors:
         score = 0
         for i in range(len(vector)):

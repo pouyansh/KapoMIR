@@ -1,7 +1,7 @@
-from src.input_reader import *
-from src.preprocess import *
-from src.indexing import *
-from src.search import *
+from input_reader import *
+from preprocess import *
+from indexing import *
+from search import *
 
 
 def main():
@@ -59,9 +59,12 @@ def main():
         #     while element:
         #         print("document id: ", element.get_doc_id(), "\tpositions: ", element.get_positions())
         #         element = element.get_child()
-        # search_english_query(term, index_table, 1001)
-        search_persian_query(term, index_table, 100)
-        # 1572 persian docs
+        if is_english(term) :
+            search_english_query(term, index_table, 1001)
+        # 1001 english documents
+        else:
+            search_persian_query(term, index_table, 1572)
+        # 1572 persian documents
 
 
 if __name__ == "__main__":
