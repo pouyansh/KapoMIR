@@ -51,6 +51,14 @@ def search_query(processed_query, index_table, number_of_docs, is_reading_from_w
             if not element:
                 print(str(query_term_vector[i]) + ' not found')
                 closest_words = find_closest_words(index_table, query_term_vector[i])
+                closest_words_bigram = []
+                closest_words_bigram_tmp = []
+                if i != 0 :
+                    closest_words_bigram = find_closest_words(index_table, query_term_vector[i-1] + query_term_vector[i])
+                if i != len(query_term_vector)-1 :
+                    closest_words_bigram_tmp = find_closest_words(index_table, query_term_vector[i] + query_term_vector[i+1])
+                closest_words_bigram += closest_words_bigram_tmp
+                closest_words = closest_words_bigram
                 if len(closest_words) == 0:
                     print('no close words found to ' + query_term_vector[i] + ' !')
                 else:
