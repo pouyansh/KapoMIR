@@ -1,3 +1,4 @@
+from src.Proximity import proximity_search
 from src.input_reader import *
 from src.preprocess import *
 from src.indexing import *
@@ -7,9 +8,10 @@ from src.search import *
 def main():
     # token_list_persian = []
     # token_list_english = []
-    # persian_documents = read_xml(
-    #     '../raw-database/Persian.xml', '{http://www.mediawiki.org/xml/export-0.10/}')
-    # english_documents = read_csv('../raw-database/English.csv')
+    persian_documents = read_xml(
+        '../raw-database/Persian.xml', '{http://www.mediawiki.org/xml/export-0.10/}')
+    english_documents = read_csv('../raw-database/English.csv')
+    # print(len(persian_documents), len(english_documents))
     # for i in range(len(persian_documents)):
     #     token_list_persian.append(persian_preprocess(persian_documents[i]))
     # for i in range(len(english_documents)):
@@ -32,51 +34,87 @@ def main():
     index_table = read_from_file("",
                                  "../output/index_table.csv", False, False)
 
-    # get input and search the term
-    # while True:
-    #     term = input("Enter a word: ")
-    #     term = english_preprocess(term)[0]
-    #     element = index_table.get_all_occurrences(term)
-    #     doc_id = 0
-    #     while element:
-    #         doc_id += gamma_decode(element.get_doc_id())[0]
-    #         print("document id: ", doc_id, "\tpositions: ", gamma_decode(element.get_positions()))
-    #         element = element.get_child()
     while True:
-        term = input("Enter a query: ")
-        # term = input("Enter a word: ")
-        # element = index_table.get_all_occurrences(term)
-        # if not element:
-        #     print('not found')
-        #     closest_words = find_closest_words(index_table, term)
-        #     if len(closest_words) == 0:
-        #         print('no close words found!')
-        #     else:
-        #         print('did you mean :')
-        #         for word in closest_words:
-        #             print(word)
-        # else:
-        #     doc_id = 0
-        #     while element:
-        #         print("document id: ", element.get_doc_id(), "\tpositions: ", element.get_positions())
-        #         element = element.get_child()
+        print("1. show the posting list for the given word")
+        print("2. show the position of the given word in each document")
+        print("3. show the preprocessed query")
+        print("4. show the list of relevant documents based on lnc-ltc")
+        print("5. show the list of relevant documents based on proximity search")
+        print("6. delete a document")
+        print("7. add a document")
+        try:
+            choice = int(input("Which one do you want?"))
+        except ValueError:
+            continue
 
-        # ***+++++++++==========////////////
-        # to add proximity search
-        # ask user if he/she wants to do proximity search instead of normal ?
-        # call proximity here and gather some docs
-        # call search functions like this:
-        # search_english_query(term, index_table, 1001, True, proximity_docs)
-        # or
-        # search_persian_query(term, index_table, 1572, True, proximity_docs)
-        # ***+++++++++==========////////////
-
-        if is_english(term):
-            search_english_query(term, index_table, 1001)
-        # 1001 english documents
-        else:
-            search_persian_query(term, index_table, 1572)
-        # 1572 persian docs
+        if choice == 1:
+            term = input("Enter the term: ")
+            if is_english(term):
+                term = english_preprocess(term)[0]
+            else:
+                term = persian_preprocess(term)[0]
+            print(index_table.get_posting_list(term))
+        elif choice == 2:
+            term = input("Enter the term: ")
+            if is_english(term):
+                term = english_preprocess(term)[0]
+            else:
+                term = persian_preprocess(term)[0]
+            element = index_table.get_all_occurrences(term)
+            doc_id = 0
+            while element:
+                positions = element.get_positions()
+                if index_table.get_is_gamma():
+                    doc_id += element.get_doc_id()
+                    positions = gamma_decode(positions)
+                elif index_table.get_is_vb():
+                    doc_id += element.get_doc_id()
+                    positions = variable_byte_decode(positions)
+                else:
+                    doc_id = element.get_doc_id()
+                print("document id: ", doc_id, "\tpositions: ", positions)
+                element = element.get_child()
+        elif choice == 3:
+            query = input("Enter the query: ")
+            if is_english(query):
+                query = english_preprocess(query)
+            else:
+                query = persian_preprocess(query)
+            print(query)
+        elif choice == 4:
+            query = input("Enter a query: ")
+            if is_english(query):
+                search_english_query(query, index_table, 1000)
+                # 1000 english documents
+            else:
+                search_persian_query(query, index_table, 1572)
+                # 1572 persian docs
+        elif choice == 5:
+            query = input("Enter a query: ")
+            window = int(input("Enter the window size: "))
+            if is_english(query):
+                temp_query = english_preprocess(query)
+            else:
+                temp_query = persian_preprocess(query)
+            doc_ids = proximity_search(temp_query, index_table, window, False, False)
+            if is_english(query):
+                search_english_query(query, index_table, 1000, True, doc_ids)
+                # 1000 english documents
+            else:
+                search_persian_query(query, index_table, 1572, True, doc_ids)
+                # 1572 persian docs
+        elif choice == 6:
+            doc_id = int(input("Document id: "))
+            if doc_id >= 1572:
+                delete_index(index_table, [english_documents[doc_id - 1572]], doc_id)
+            else:
+                delete_index(index_table, [persian_documents[doc_id - 1]], doc_id)
+        elif choice == 7:
+            doc_id = int(input("Document id: "))
+            if doc_id >= 1572:
+                insert_index(index_table, [english_documents[doc_id - 1572]], doc_id)
+            else:
+                insert_index(index_table, [persian_documents[doc_id]], doc_id)
 
 
 if __name__ == "__main__":

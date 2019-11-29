@@ -1,4 +1,7 @@
 from __future__ import unicode_literals
+
+import csv
+
 import hazm
 import nltk
 from nltk.stem import PorterStemmer
@@ -74,37 +77,46 @@ def english_preprocess(text):
     return english_stemmer(delete_english_stop_words(english_tokenize(english_normalizer(text))))
 
 
-def stopwords(terms_list):
-    persian_stopwords = [']', '[', '.', 'و', 'در', '{', '}', '|', '=', ':', 'به', 'از', ')', '(', 'که', '*', 'اس',
-                         'این', 'را', '==', '«', '»']
-    english_stopwords = ['the', '.', 'a', 'of', 'to', 'in', 'and', '-', ';', 'on', 'it', 'for', ')', '(', "'s", '#',
-                         'that', 'reuter', 'as', '39', 'with', 'at', 'by']
-    deleted_terms = persian_stopwords + english_stopwords
-    output = []
-    for term in terms_list:
-        if term in deleted_terms:
-            continue
-        else:
-            output.append(term)
-    # m = {}
-    # for doc in terms_list:
-    #     for item in doc:
-    #         if item in m:
-    #             m[item][0] += 1
-    #         else:
-    #             m[item] = [1]
-    # m = nltk.OrderedDict(sorted(m.items(), key=lambda t: -t[1][0]))
-    # terms_count = 0
-    # for i in range(len(terms_list)):
-    #     terms_count += len(terms_list[i])
-    # deleted_terms = []
-    # for item in m:
-    # if m[item][0] >= 0.005 * terms_count:
-    # print(item, m[item][0])
-    # deleted_terms.append(item)
-    # print(deleted_terms)
-    # output = [list(filter(lambda a: a not in deleted_terms, terms_list[i])) for i in range(len(terms_list))]
-    # terms_count = 0
-    # for doc in output:
-    #     terms_count += len(doc)
+def stopwords(terms_list, check=False):
+    # persian_stopwords = [']', '[', '.', 'و', 'در', '{', '}', '|', '=', ':', 'به', 'از', ')', '(', 'که', '*', 'اس',
+    #                      'این', 'را', '==', '«', '»']
+    # english_stopwords = ['the', '.', 'a', 'of', 'to', 'in', 'and', '-', ';', 'on', 'it', 'for', ')', '(', "'s", '#',
+    #                      'that', 'reuter', 'as', '39', 'with', 'at', 'by']
+    # deleted_terms = persian_stopwords + english_stopwords
+    # output = []
+    # for term in terms_list:
+    #     if term in deleted_terms:
+    #         continue
+    #     else:
+    #         output.append(term)
+    if not check:
+        m = {}
+        for doc in terms_list:
+            for item in doc:
+                if item in m:
+                    m[item][0] += 1
+                else:
+                    m[item] = [1]
+        m = nltk.OrderedDict(sorted(m.items(), key=lambda t: -t[1][0]))
+        terms_count = 0
+        for i in range(len(terms_list)):
+            terms_count += len(terms_list[i])
+        deleted_terms = []
+        output = []
+        with open("../output/stopwords.csv", 'w', encoding='utf-8', newline='') as f:
+            writer = csv.writer(f)
+            for item in m:
+                if m[item][0] >= 0.005 * terms_count:
+                    print(item, m[item][0])
+                    writer.writerow(item)
+                deleted_terms.append(item)
+                output = [list(filter(lambda a: a not in deleted_terms, terms_list[i])) for i in range(len(terms_list))]
+    else:
+        output = []
+        with open("../output/stopwords.csv", 'r', encoding='utf-8', newline='') as f:
+            reader = csv.reader(f)
+            deleted_terms = []
+            for row in reader:
+                deleted_terms.append(row[0])
+                output = list(filter(lambda a: a not in deleted_terms, terms_list))
     return output

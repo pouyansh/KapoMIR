@@ -265,7 +265,7 @@ class IndexTable:
     def get_all_occurrences(self, term):
         if term in self.table:
             return self.table[term][0]
-        return False
+        return None
 
     def get_all_records(self, filename_indexes):
         lines = []
@@ -336,6 +336,23 @@ class IndexTable:
             term_list = term_list.get_child()
         return output
 
+    def get_posting_list(self, term):
+        if term not in self.table:
+            return None
+        term_list = self.table[term][0]
+        output = []
+        doc_id = term_list.get_doc_id()
+        output.append(doc_id)
+        term_list = term_list.get_child()
+        while term_list:
+            if self.is_gamma or self.is_vb:
+                doc_id += term_list.get_doc_id()
+            else:
+                doc_id = term_list.get_doc_id()
+            output.append(doc_id)
+            term_list = term_list.get_child()
+        return output
+
 
 def insert_index(index_table, doc_list, offset):
     for doc_id in range(len(doc_list)):
@@ -354,7 +371,7 @@ def delete_index(index_table, doc_list, offset):
             if term not in term_list:
                 term_list.append(term)
         index_table.delete_record(doc_id + offset, term_list)
-    return index_table
+    return delete_bigram_index(index_table, doc_list, offset)
 
 
 def insert_bigram_index(index_table, doc_list, offset):
@@ -446,5 +463,6 @@ def read_from_file(filename_words, filename_indexes, is_vb, is_gamma):
         with open(filename_indexes, 'r', encoding='utf-8', newline='') as f:
             reader = csv.reader(f)
             for row in reader:
-                final_lines.append(row)
+                line = [row[0]] + [int(row[i]) for i in range(1, len(row))]
+                final_lines.append(line)
     return IndexTable(final_lines, is_vb, is_gamma)

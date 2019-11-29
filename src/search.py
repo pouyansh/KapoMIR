@@ -4,7 +4,7 @@ import math
 
 
 def search_persian_query(query, index_table, number_of_docs, is_reading_from_window=False, window_docs=[]):
-    processed_query = stopwords(persian_preprocess(query))
+    processed_query = stopwords(persian_preprocess(query), True)
     if is_reading_from_window :
         search_query(processed_query, index_table, number_of_docs, is_reading_from_window, window_docs)
     else:
@@ -12,7 +12,7 @@ def search_persian_query(query, index_table, number_of_docs, is_reading_from_win
 
 
 def search_english_query(query, index_table, number_of_docs, is_reading_from_window=False, window_docs=[]):
-    processed_query = stopwords(english_preprocess(query))
+    processed_query = stopwords(english_preprocess(query), True)
     if is_reading_from_window :
         search_query(processed_query, index_table, number_of_docs, is_reading_from_window, window_docs)
     else:

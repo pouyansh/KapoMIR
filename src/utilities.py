@@ -118,14 +118,16 @@ def str_to_binary(s):
     whole_binary += int_to_binary(num)
     return whole_binary
 
+
 def str_to_ascii_mean(string):
     ascii_mean = 0
     for i in string:
         ascii_mean += ord(i)
     return ascii_mean / len(string)
 
+
 def is_english(string):
-    if str_to_ascii_mean(string) < 200 :
+    if str_to_ascii_mean(string) < 200:
         return True
     else:
         return False
