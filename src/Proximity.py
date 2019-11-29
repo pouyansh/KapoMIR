@@ -1,4 +1,4 @@
-from utilities import gamma_decode
+from src.utilities import gamma_decode
 
 
 def proximity_search(query, index_table, window):

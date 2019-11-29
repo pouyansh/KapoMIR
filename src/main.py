@@ -21,16 +21,16 @@ def main():
     # preprocessed_english = stopwords(token_list_english)
     #
     # # creating indexing tables
-    # index_table = insert_index(IndexTable([], False, True), preprocessed_persian, 1)
+    # index_table = insert_index(IndexTable([], False, False), preprocessed_persian, 1)
     # index_table = insert_index(index_table, preprocessed_english, len(preprocessed_persian))
     # #
     # # creating bigram indexing tables
     # index_table = insert_bigram_index(index_table, preprocessed_persian, 1)
     # index_table = insert_bigram_index(index_table, preprocessed_english, len(preprocessed_persian))
-    # save_to_file(index_table, "../output/gamma/index_table_gamma_words",
-    #              "../output/gamma/index_table_gamma_indexes_")
-    index_table = read_from_file("../../gamma/index_table_gamma_words",
-                                 "../../gamma/index_table_gamma_indexes_", False, True)
+    # save_to_file(index_table, "",
+    #              "../output/index_table.csv")
+    index_table = read_from_file("",
+                                 "../output/index_table.csv", False, False)
 
     # get input and search the term
     # while True:
@@ -42,7 +42,6 @@ def main():
     #         doc_id += gamma_decode(element.get_doc_id())[0]
     #         print("document id: ", doc_id, "\tpositions: ", gamma_decode(element.get_positions()))
     #         element = element.get_child()
-
     while True:
         term = input("Enter a query: ")
         # term = input("Enter a word: ")
@@ -61,8 +60,22 @@ def main():
         #     while element:
         #         print("document id: ", element.get_doc_id(), "\tpositions: ", element.get_positions())
         #         element = element.get_child()
-        # search_english_query(term, index_table, 1001)
-        search_english_query(term, index_table, 100)
+
+        # ***+++++++++==========////////////
+        # to add proximity search
+        # ask user if he/she wants to do proximity search instead of normal ?
+        # call proximity here and gather some docs
+        # call search functions like this:
+        # search_english_query(term, index_table, 1001, True, proximity_docs)
+        # or
+        # search_persian_query(term, index_table, 1572, True, proximity_docs)
+        # ***+++++++++==========////////////
+
+        if is_english(term):
+            search_english_query(term, index_table, 1001)
+        # 1001 english documents
+        else:
+            search_persian_query(term, index_table, 1572)
         # 1572 persian docs
 
 

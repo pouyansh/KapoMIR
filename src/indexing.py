@@ -1,6 +1,6 @@
 import csv
 
-from utilities import *
+from src.utilities import *
 
 
 class TermList:
@@ -123,11 +123,11 @@ class IndexTable:
     def read_from_file_variable_byte(self, lines):
         for line in lines:
             term = line[0]
-            doc_id = variable_byte_decode(line[1])
+            doc_id = line[1]
             temp_term_list = self.create_term(term, doc_id, line[2])
             counter = 3
             while counter < len(line):
-                doc_id = variable_byte_decode(line[counter])
+                doc_id = line[counter]
                 positions = line[counter + 1]
                 counter += 1
                 temp_term_list = self.insert_all_doc_occurrences(term, doc_id, positions, temp_term_list)
@@ -206,7 +206,6 @@ class IndexTable:
                 position = [position]
             self.create_term(term, doc_id, position)
         else:
-            self.table[term][1] += 1
             previous_term, previous_doc_id = self.search_cell(term, doc_id)
             self.insert_term_list_in_dictionary(term, doc_id, position, previous_term, previous_doc_id)
 
@@ -227,7 +226,7 @@ class IndexTable:
                         record.get_child().set_parent(record.get_parent())
                     else:
                         self.table[term][3] = record.get_parent()
-                self.table[term][1] -= 1
+                    self.table[term][1] -= 1
 
     def search_cell(self, term, doc_id):
         if self.is_vb or self.is_gamma:
@@ -271,10 +270,11 @@ class IndexTable:
     def get_all_records(self, filename_indexes):
         lines = []
         terms = []
-        for term in self.table:
-            terms.append(term)
-            current_cell = self.table[term][0]
-            if self.is_gamma:
+
+        if self.is_gamma:
+            for term in self.table:
+                terms.append(term)
+                current_cell = self.table[term][0]
                 data = []
                 while current_cell:
                     data += gamma_encode(current_cell.get_doc_id())
@@ -289,18 +289,34 @@ class IndexTable:
                         f.write(binary_to_str(data).encode('utf-8'))
                 except OSError:
                     pass
-            else:
+        elif self.is_vb:
+            data = ""
+            for term in self.table:
+                terms.append(term)
+                current_cell = self.table[term][0]
+                df = self.table[term][1]
+                data += variable_byte_encode(df)
+                while current_cell:
+                    data += variable_byte_encode(current_cell.get_doc_id())
+                    positions = variable_byte_decode(current_cell.get_positions())
+                    length = len(positions)
+                    data += variable_byte_encode(length)
+                    data += current_cell.get_positions()
+                    current_cell = current_cell.get_child()
+            with open(filename_indexes, 'wb') as f:
+                f.write(data.encode('utf-8'))
+        else:
+            for term in self.table:
+                current_cell = self.table[term][0]
                 current_line = [term]
                 while current_cell:
                     current_line.append(current_cell.get_doc_id())
-                    if self.is_vb or self.is_gamma:
-                        current_line.append(current_cell.get_positions())
-                    else:
-                        for i in current_cell.get_positions():
-                            current_line.append(i)
-                        current_line.append(-1)
+                    for i in current_cell.get_positions():
+                        current_line.append(i)
+                    current_line.append(-1)
                     current_cell = current_cell.get_child()
                 lines.append(current_line)
+                terms.append(terms)
         return terms, lines
 
     def get_dictionary(self, term):
@@ -323,7 +339,8 @@ class IndexTable:
 
 def insert_index(index_table, doc_list, offset):
     for doc_id in range(len(doc_list)):
-        print(doc_id)
+        if doc_id % 100 == 0:
+            print(doc_id)
         for item_position in range(len(doc_list[doc_id])):
             term = doc_list[doc_id][item_position]
             index_table.add_record(term, doc_id + offset, item_position)
@@ -342,7 +359,8 @@ def delete_index(index_table, doc_list, offset):
 
 def insert_bigram_index(index_table, doc_list, offset):
     for doc_id in range(len(doc_list)):
-        print(doc_id)
+        if doc_id % 100 == 0:
+            print(doc_id)
         for item_position in range(len(doc_list[doc_id]) - 1):
             term = doc_list[doc_id][item_position] + " " + doc_list[doc_id][item_position + 1]
             index_table.add_record(term, doc_id + offset, item_position)
@@ -362,19 +380,26 @@ def delete_bigram_index(index_table, doc_list, offset):
 
 def save_to_file(index_table, filename_words, filename_indexes):
     data_words, data_indexes = index_table.get_all_records(filename_indexes)
-    with open(filename_words, 'w', encoding='utf-8', newline='') as f:
-        writer = csv.writer(f)
-        writer.writerow(data_words)
+    if index_table.get_is_gamma() or index_table.get_is_vb():
+        with open(filename_words, 'w', encoding='utf-8', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(data_words)
+    else:
+        with open(filename_indexes, 'w', encoding='utf-8', newline='') as f:
+            writer = csv.writer(f)
+            for row in data_indexes:
+                writer.writerow(row)
 
 
 def read_from_file(filename_words, filename_indexes, is_vb, is_gamma):
     data_words = []
     final_lines = []
-    if is_gamma:
-        with open(filename_words, 'r', encoding='utf-8') as f:
+    if is_vb or is_gamma:
+        with open(filename_words, 'r', encoding='utf-8', newline='') as f:
             reader = csv.reader(f)
             for row in reader:
                 data_words += row
+    if is_gamma:
         counter = 0
         for word in data_words:
             counter += 1
@@ -387,4 +412,39 @@ def read_from_file(filename_words, filename_indexes, is_vb, is_gamma):
                 final_lines.append(lines)
             except OSError:
                 pass
+    elif is_vb:
+        with open(filename_indexes, 'rb') as f:
+            data = f.read().decode('utf-8')
+            values = variable_byte_decode(data)
+            counter = 0
+            cnt_terms = 0
+            while counter < len(values):
+                line = [data_words[cnt_terms]]
+                cnt_terms += 1
+                df = values[counter]
+                counter += 1
+                cnt = 0
+                while cnt < df:
+                    doc_id = values[counter]
+                    line .append(doc_id)
+                    counter += 1
+                    cnt += 1
+                    length = values[counter]
+                    counter += 1
+                    cnt_positions = 0
+                    data_positions = ""
+                    while cnt_positions < length:
+                        try:
+                            data_positions += variable_byte_encode(values[counter])
+                        except IndexError:
+                            print(line, counter, len(values), df, doc_id)
+                        counter += 1
+                        cnt_positions += 1
+                    line.append(data_positions)
+                final_lines.append(line)
+    else:
+        with open(filename_indexes, 'r', encoding='utf-8', newline='') as f:
+            reader = csv.reader(f)
+            for row in reader:
+                final_lines.append(row)
     return IndexTable(final_lines, is_vb, is_gamma)
