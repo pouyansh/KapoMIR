@@ -1,6 +1,4 @@
-import base64
 import csv
-import sys
 
 from src.utilities import *
 
@@ -103,14 +101,24 @@ class IndexTable:
     def read_from_file_gamma(self, lines):
         for line in lines:
             term = line[0]
-            doc_ids = gamma_decode(line[1])
-            temp_term_list = self.create_term(term, doc_ids[0], line[2])
+            doc_id = line[1]
+            length = line[2]
+            positions = []
             counter = 3
-            while counter < len(line):
-                doc_id = doc_ids[counter - 2]
-                positions = line[counter]
-                temp_term_list = self.insert_all_doc_occurrences(term, doc_id, positions, temp_term_list)
+            for i in range(length):
+                positions += gamma_encode(line[counter])
                 counter += 1
+            temp_term_list = self.create_term(term, doc_id, binary_to_str(positions))
+            while counter < len(line):
+                doc_id = line[counter]
+                counter += 1
+                length = line[counter]
+                counter += 1
+                positions = []
+                for i in range(length):
+                    positions += gamma_encode(line[counter])
+                    counter += 1
+                temp_term_list = self.insert_all_doc_occurrences(term, doc_id, positions, temp_term_list)
 
     def read_from_file_variable_byte(self, lines):
         for line in lines:
@@ -260,21 +268,29 @@ class IndexTable:
             return self.table[term][0]
         return False
 
-    def get_all_records(self):
+    def get_all_records(self, filename_indexes):
         lines = []
+        terms = []
         for term in self.table:
+            terms.append(term)
             current_cell = self.table[term][0]
-            current_line = [term]
             if self.is_gamma:
-                doc_ids = []
-                current_line.append('')
+                data = []
                 while current_cell:
-                    doc_ids += gamma_encode(current_cell.get_doc_id())
-                    current_line.append(current_cell.get_positions())
+                    data += gamma_encode(current_cell.get_doc_id())
+                    positions = gamma_decode(current_cell.get_positions())
+                    data += gamma_encode(len(positions))
+                    for p in positions:
+                        data += gamma_encode(p)
                     current_cell = current_cell.get_child()
-                current_line[1] = binary_to_str(doc_ids)
-                lines.append(current_line)
+                data += [1]
+                try:
+                    with open(filename_indexes + term, 'wb') as f:
+                        f.write(binary_to_str(data).encode('utf-8'))
+                except OSError:
+                    pass
             else:
+                current_line = [term]
                 while current_cell:
                     current_line.append(current_cell.get_doc_id())
                     if self.is_vb or self.is_gamma:
@@ -285,7 +301,7 @@ class IndexTable:
                         current_line.append(-1)
                     current_cell = current_cell.get_child()
                 lines.append(current_line)
-        return lines
+        return terms, lines
 
     def get_dictionary(self, term):
         if term not in self.table:
@@ -344,32 +360,31 @@ def delete_bigram_index(index_table, doc_list, offset):
     return index_table
 
 
-def save_to_file(index_table, filename):
-    with open(filename, 'wt', encoding='utf-8', newline='') as f:
-        for row in index_table.get_all_records():
-            data = row[0]
-            counter = 1
-            while counter < len(row):
-                s = str(base64.b64encode(row[counter].encode('utf-8')))
-                s = s[2:-1]
-                data += "," + s
-                counter += 1
-            f.write(data + '\n')
+def save_to_file(index_table, filename_words, filename_indexes):
+    data_words, data_indexes = index_table.get_all_records(filename_indexes)
+    with open(filename_words, 'w', encoding='utf-8', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(data_words)
 
 
-def read_from_file(filename, is_vb, is_gamma):
-    csv.field_size_limit(sys.maxsize)
-    with open(filename, 'rt', encoding='utf-8') as f:
-        rows = f.read().split('\n')
-        lines = []
-        for line in rows:
-            if line:
-                row = line.split(',')
-                data = [row[0]]
-                counter = 1
-                while counter < len(row):
-                    s = base64.b64decode(row[counter]).decode('utf-8')
-                    data.append(s)
-                    counter += 1
-                lines.append(data)
-    return IndexTable(lines, is_vb, is_gamma)
+def read_from_file(filename_words, filename_indexes, is_vb, is_gamma):
+    data_words = []
+    final_lines = []
+    if is_gamma:
+        with open(filename_words, 'r', encoding='utf-8') as f:
+            reader = csv.reader(f)
+            for row in reader:
+                data_words += row
+        counter = 0
+        for word in data_words:
+            counter += 1
+            if counter % 1000 == 0:
+                print(counter)
+            try:
+                with open(filename_indexes + word, 'rb') as f:
+                    rows = f.read().decode('utf-8')
+                    lines = [word] + gamma_decode(rows, True)
+                final_lines.append(lines)
+            except OSError:
+                pass
+    return IndexTable(final_lines, is_vb, is_gamma)

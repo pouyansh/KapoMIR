@@ -89,8 +89,7 @@ def binary_to_str(binary):
     s = ""
     while len(binary) > 8:
         byte = [binary[i] for i in range(8)]
-        for i in range(8):
-            binary.pop(0)
+        binary = binary[8:]
         num = 1
         out = 0
         for i in range(8):
