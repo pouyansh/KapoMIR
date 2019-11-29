@@ -1,6 +1,6 @@
 import csv
 
-from src.utilities import *
+from utilities import *
 
 
 class TermList:
