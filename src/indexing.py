@@ -1,6 +1,7 @@
 import csv
 
 from src.utilities import *
+from src.bigram_indexing import BigramIndex
 
 
 class TermList:
@@ -9,7 +10,7 @@ class TermList:
         if is_vb:
             self.positions = variable_byte_encode(position)
         elif is_gamma:
-            self.positions = binary_to_str(gamma_encode(position))
+            self.positions = gamma_encode(position)
         else:
             self.positions = [position]
         self.parent = parent
@@ -45,12 +46,7 @@ class TermList:
         if is_vb:
             self.positions += variable_byte_encode(position - self.last_position)
         elif is_gamma:
-            numbers = gamma_decode(self.positions)
-            numbers.append(position - self.last_position)
-            p = []
-            for num in numbers:
-                p += gamma_encode(num)
-            self.positions = binary_to_str(p)
+            self.positions += gamma_encode(position - self.last_position)
         else:
             if position not in self.positions:
                 self.positions.append(position)
@@ -65,10 +61,13 @@ class TermList:
 
 
 class IndexTable:
-    def __init__(self, lines, is_vb, is_gamma):
+    def __init__(self, lines, is_vb, is_gamma, filename_bigram=""):
         self.table = {}
         self.is_vb = is_vb
         self.is_gamma = is_gamma
+        self.bigram = BigramIndex()
+        if filename_bigram:
+            self.bigram.read_from_file(filename_bigram)
         self.read_from_file(lines)
 
     def get_table(self):
@@ -97,6 +96,7 @@ class IndexTable:
                         counter += 2
                         continue
                     self.add_record(term, doc_id, int(line[counter]))
+                    self.bigram.add_term(term)
                     counter += 1
 
     def read_from_file_gamma(self, lines):
@@ -109,7 +109,8 @@ class IndexTable:
             for i in range(length):
                 positions += gamma_encode(line[counter])
                 counter += 1
-            temp_term_list = self.create_term(term, doc_id, binary_to_str(positions))
+            temp_term_list = self.create_term(term, doc_id, positions)
+            self.bigram.add_term(term)
             while counter < len(line):
                 doc_id = line[counter]
                 counter += 1
@@ -120,18 +121,21 @@ class IndexTable:
                     positions += gamma_encode(line[counter])
                     counter += 1
                 temp_term_list = self.insert_all_doc_occurrences(term, doc_id, positions, temp_term_list)
+                self.bigram.add_term(term)
 
     def read_from_file_variable_byte(self, lines):
         for line in lines:
             term = line[0]
             doc_id = line[1]
             temp_term_list = self.create_term(term, doc_id, line[2])
+            self.bigram.add_term(term)
             counter = 3
             while counter < len(line):
                 doc_id = line[counter]
                 positions = line[counter + 1]
                 counter += 1
                 temp_term_list = self.insert_all_doc_occurrences(term, doc_id, positions, temp_term_list)
+                self.bigram.add_term(term)
                 counter += 1
 
     # For case when no TermList for term exists in the dictionary. Creates a TermList and adds it to the dictionary.
@@ -142,7 +146,7 @@ class IndexTable:
             positions = variable_byte_decode(positions)
             new_term.set_frequency(len(positions))
         elif self.is_gamma:
-            positions = gamma_decode(positions)
+            positions = gamma_decode(binary_to_str(positions))
             new_term.set_frequency(len(positions))
         self.table[term] = [new_term]
         self.table[term].append(1)
@@ -198,11 +202,12 @@ class IndexTable:
         previous_term.set_child(new_term)
 
     def add_record(self, term, doc_id, position):
+        self.bigram.add_term(term)
         if term not in self.table:
             if self.is_vb:
                 position = variable_byte_encode(position)
             elif self.is_gamma:
-                position = binary_to_str(gamma_encode(position))
+                position = gamma_encode(position)
             else:
                 position = [position]
             self.create_term(term, doc_id, position)
@@ -220,6 +225,7 @@ class IndexTable:
                     else:
                         if not record.get_child():
                             del self.table[term]
+                            self.bigram.delete_term(term)
                             continue
                         else:
                             self.table[term][0] = record.get_child()
@@ -268,10 +274,10 @@ class IndexTable:
             return self.table[term][0]
         return None
 
-    def get_all_records(self, filename_indexes):
+    def get_all_records(self, filename_indexes, filename_bigram):
         lines = []
         terms = []
-
+        self.bigram.save_to_file(filename_bigram)
         if self.is_gamma:
             for term in self.table:
                 terms.append(term)
@@ -279,10 +285,8 @@ class IndexTable:
                 data = []
                 while current_cell:
                     data += gamma_encode(current_cell.get_doc_id())
-                    positions = gamma_decode(current_cell.get_positions())
-                    data += gamma_encode(len(positions))
-                    for p in positions:
-                        data += gamma_encode(p)
+                    data += gamma_encode(current_cell.get_frequency())
+                    data += current_cell.get_positions()
                     current_cell = current_cell.get_child()
                 data += [1]
                 try:
@@ -357,10 +361,12 @@ class IndexTable:
 
 def insert_index(index_table, doc_list, offset):
     for doc_id in range(len(doc_list)):
+        if doc_id % 100 == 0:
+            print(doc_id)
         for item_position in range(len(doc_list[doc_id])):
             term = doc_list[doc_id][item_position]
             index_table.add_record(term, doc_id + offset, item_position)
-    return insert_bigram_index(index_table, doc_list, offset)
+    return index_table
 
 
 def delete_index(index_table, doc_list, offset):
@@ -370,32 +376,11 @@ def delete_index(index_table, doc_list, offset):
             if term not in term_list:
                 term_list.append(term)
         index_table.delete_record(doc_id + offset, term_list)
-    return delete_bigram_index(index_table, doc_list, offset)
-
-
-def insert_bigram_index(index_table, doc_list, offset):
-    for doc_id in range(len(doc_list)):
-        if doc_id % 100 == 0:
-            print(doc_id)
-        for item_position in range(len(doc_list[doc_id]) - 1):
-            term = doc_list[doc_id][item_position] + " " + doc_list[doc_id][item_position + 1]
-            index_table.add_record(term, doc_id + offset, item_position)
     return index_table
 
 
-def delete_bigram_index(index_table, doc_list, offset):
-    for doc_id in range(len(doc_list)):
-        term_list = []
-        for term_index in range(len(doc_list[doc_id]) - 1):
-            term = doc_list[doc_id][term_index] + " " + doc_list[doc_id][term_index + 1]
-            if term not in term_list:
-                term_list.append(term)
-        index_table.delete_record(doc_id + offset, term_list)
-    return index_table
-
-
-def save_to_file(index_table, filename_words, filename_indexes):
-    data_words, data_indexes = index_table.get_all_records(filename_indexes)
+def save_to_file(index_table, filename_words, filename_indexes, filename_bigram):
+    data_words, data_indexes = index_table.get_all_records(filename_indexes, filename_bigram)
     if index_table.get_is_gamma() or index_table.get_is_vb():
         with open(filename_words, 'w', encoding='utf-8', newline='') as f:
             writer = csv.writer(f)
@@ -407,7 +392,7 @@ def save_to_file(index_table, filename_words, filename_indexes):
                 writer.writerow(row)
 
 
-def read_from_file(filename_words, filename_indexes, is_vb, is_gamma):
+def read_from_file(filename_words, filename_indexes, filenames_bigram, is_vb, is_gamma):
     data_words = []
     final_lines = []
     if is_vb or is_gamma:
@@ -442,7 +427,7 @@ def read_from_file(filename_words, filename_indexes, is_vb, is_gamma):
                 cnt = 0
                 while cnt < df:
                     doc_id = values[counter]
-                    line .append(doc_id)
+                    line.append(doc_id)
                     counter += 1
                     cnt += 1
                     length = values[counter]
@@ -451,6 +436,7 @@ def read_from_file(filename_words, filename_indexes, is_vb, is_gamma):
                     data_positions = ""
                     while cnt_positions < length:
                         try:
+                            print(values[counter])
                             data_positions += variable_byte_encode(values[counter])
                         except IndexError:
                             print(line, counter, len(values), df, doc_id)
@@ -464,4 +450,4 @@ def read_from_file(filename_words, filename_indexes, is_vb, is_gamma):
             for row in reader:
                 line = [row[0]] + [int(row[i]) for i in range(1, len(row))]
                 final_lines.append(line)
-    return IndexTable(final_lines, is_vb, is_gamma)
+    return IndexTable(final_lines, is_vb, is_gamma, filenames_bigram)

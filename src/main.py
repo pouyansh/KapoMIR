@@ -1,4 +1,5 @@
 from src.Proximity import proximity_search
+from src.bigram_indexing import BigramIndex
 from src.input_reader import *
 from src.preprocess import *
 from src.indexing import *
@@ -8,6 +9,8 @@ from src.search import *
 def main():
     token_list_persian = []
     token_list_english = []
+    is_vb = True
+    is_gamma = False
     persian_documents = read_xml(
         '../raw-database/Persian.xml', '{http://www.mediawiki.org/xml/export-0.10/}')
     english_documents = read_csv('../raw-database/English.csv')
@@ -20,18 +23,14 @@ def main():
     # removing stopwords from term lists
     preprocessed_persian, stopwords_list = stopwords(token_list_persian, False, [])
     preprocessed_english, stopwords_list = stopwords(token_list_english, False, stopwords_list)
-    #
-    # # creating indexing tables
-    # index_table = insert_index(IndexTable([], False, False), preprocessed_persian, 1)
+
+    # creating indexing tables
+    # index_table = insert_index(IndexTable([], is_vb, is_gamma), preprocessed_persian, 1)
     # index_table = insert_index(index_table, preprocessed_english, len(preprocessed_persian))
-    # #
-    # # creating bigram indexing tables
-    # index_table = insert_bigram_index(index_table, preprocessed_persian, 1)
-    # index_table = insert_bigram_index(index_table, preprocessed_english, len(preprocessed_persian))
-    # save_to_file(index_table, "",
-    #              "../output/index_table.csv")
-    index_table = read_from_file("",
-                                 "../output/index_table.csv", False, False)
+    # save_to_file(index_table, "../output/index_table_vb_words",
+    #              "../output/index_table_vb_indexes", "../output/index_table_gamma_indexes_bigram")
+    index_table = read_from_file("../output/index_table_vb_words", "../output/index_table_vb_indexes",
+                                 "../output/index_table_gamma_indexes_bigram", is_vb, is_gamma)
 
     while True:
         print("1. show the posting list for the given word")
@@ -65,7 +64,7 @@ def main():
                 positions = element.get_positions()
                 if index_table.get_is_gamma():
                     doc_id += element.get_doc_id()
-                    positions = gamma_decode(positions)
+                    positions = gamma_decode(binary_to_str(positions))
                 elif index_table.get_is_vb():
                     doc_id += element.get_doc_id()
                     positions = variable_byte_decode(positions)
@@ -95,7 +94,8 @@ def main():
                 temp_query = english_preprocess(query)
             else:
                 temp_query = persian_preprocess(query)
-            doc_ids = proximity_search(temp_query, index_table, window, False, False)
+            doc_ids = proximity_search(temp_query, index_table, window, is_vb, is_gamma)
+            print(doc_ids)
             if is_english(query):
                 search_english_query(query, index_table, 1000, True, doc_ids)
                 # 1000 english documents

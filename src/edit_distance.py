@@ -2,10 +2,11 @@ def find_jaccard(first, second):
     return len(set(first).intersection(set(second))) / len(set(first).union(set(second)))
 
 
-def find_closest_words(index_table, term):
+def find_closest_words(term, index_table):
     close_words = []
     edit_distance_with_words = []
-    for i in index_table.get_table():
+    possible_words = index_table.bigram.get_terms(term)
+    for i in possible_words:
         jaccard_distance = find_jaccard(i, term)
         if jaccard_distance >= 0.6:
             leven_distance = levenshtein_distance(i, term)

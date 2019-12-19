@@ -10,6 +10,7 @@ def proximity_search(query, index_table, window, is_vb, is_gamma):
     term_lists_doc_ids = [term_list.get_doc_id() for term_list in term_lists]
     output_doc_ids = []
     while True:
+        # print(term_lists_doc_ids)
         current_max = max(term_lists_doc_ids)
         check_not_equal = False
         for i in range(len(term_lists)):
@@ -45,6 +46,7 @@ def proximity_search_in_doc(term_lists, window, is_vb, is_gamma):
         all_positions = [[p for p in term_list.get_positions()] for term_list in term_lists]
     current_positions = [positions[0] for positions in all_positions]
     while True:
+        # print(current_positions)
         min_position = min(current_positions)
         max_position = max(current_positions)
         if max_position - min_position <= window:

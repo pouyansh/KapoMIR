@@ -5,7 +5,7 @@ import math
 
 def search_persian_query(query, index_table, number_of_docs, is_reading_from_window=False, window_docs=[]):
     processed_query, s = stopwords(persian_preprocess(query), True)
-    if is_reading_from_window :
+    if is_reading_from_window:
         search_query(processed_query, index_table, number_of_docs, is_reading_from_window, window_docs)
     else:
         search_query(processed_query, index_table, number_of_docs)
@@ -13,7 +13,7 @@ def search_persian_query(query, index_table, number_of_docs, is_reading_from_win
 
 def search_english_query(query, index_table, number_of_docs, is_reading_from_window=False, window_docs=[]):
     processed_query, s = stopwords(english_preprocess(query), True)
-    if is_reading_from_window :
+    if is_reading_from_window:
         search_query(processed_query, index_table, number_of_docs, is_reading_from_window, window_docs)
     else:
         search_query(processed_query, index_table, number_of_docs)
@@ -50,15 +50,7 @@ def search_query(processed_query, index_table, number_of_docs, is_reading_from_w
             element = index_table.get_all_occurrences(query_term_vector[i])
             if not element:
                 print(str(query_term_vector[i]) + ' not found')
-                closest_words = find_closest_words(index_table, query_term_vector[i])
-                closest_words_bigram = []
-                closest_words_bigram_tmp = []
-                if i != 0 :
-                    closest_words_bigram = find_closest_words(index_table, query_term_vector[i-1] + query_term_vector[i])
-                if i != len(query_term_vector)-1 :
-                    closest_words_bigram_tmp = find_closest_words(index_table, query_term_vector[i] + query_term_vector[i+1])
-                closest_words_bigram += closest_words_bigram_tmp
-                closest_words = closest_words_bigram
+                closest_words = find_closest_words(query_term_vector[i], index_table)
                 if len(closest_words) == 0:
                     print('no close words found to ' + query_term_vector[i] + ' !')
                 else:
@@ -91,7 +83,7 @@ def search_query(processed_query, index_table, number_of_docs, is_reading_from_w
     for vector in doc_vectors:
         vector_sum = 0
         for i in vector:
-            vector_sum += i*i
+            vector_sum += i * i
         vector_sum = math.sqrt(vector_sum)
         for i in range(len(vector)):
             vector[i] = vector[i] / vector_sum
