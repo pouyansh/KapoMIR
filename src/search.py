@@ -3,23 +3,64 @@ from src.edit_distance import *
 import math
 
 
-def search_persian_query(query, index_table, number_of_docs, is_reading_from_window=False, window_docs=[]):
+def search_persian_query(query, index_table, number_of_docs, similar_words, is_reading_from_window=False,
+                         window_docs=[]):
     processed_query, s = stopwords(persian_preprocess(query), True)
     if is_reading_from_window:
-        search_query(processed_query, index_table, number_of_docs, is_reading_from_window, window_docs)
+        search_query(processed_query, index_table, number_of_docs, similar_words, is_reading_from_window, window_docs)
     else:
-        search_query(processed_query, index_table, number_of_docs)
+        search_query(processed_query, index_table, number_of_docs, similar_words)
 
 
-def search_english_query(query, index_table, number_of_docs, is_reading_from_window=False, window_docs=[]):
+def search_english_query(query, index_table, number_of_docs, similar_words, is_reading_from_window=False,
+                         window_docs=[]):
     processed_query, s = stopwords(english_preprocess(query), True)
     if is_reading_from_window:
-        search_query(processed_query, index_table, number_of_docs, is_reading_from_window, window_docs)
+        search_query(processed_query, index_table, number_of_docs, similar_words, is_reading_from_window, window_docs)
     else:
-        search_query(processed_query, index_table, number_of_docs)
+        search_query(processed_query, index_table, number_of_docs, similar_words)
 
 
-def search_query(processed_query, index_table, number_of_docs, is_reading_from_window=False, window_docs=[]):
+def rate_english_doc(query, index_table, number_of_docs):
+    processed_query, s = stopwords(english_preprocess(query), True)
+    return rate_docs(processed_query, index_table, number_of_docs, False)
+
+
+def search_query(processed_query, index_table, number_of_docs, similar_words, is_reading_from_window=False,
+                 window_docs=[]):
+    doc_scores, doc_ids = rate_docs(processed_query, index_table, number_of_docs, similar_words, is_reading_from_window,
+                                    window_docs)
+
+    best_docs = []
+    best_docs_scores = []
+
+    for i in range(10):
+        if len(doc_scores) > 0:
+            max_score = doc_scores[0]
+        else:
+            max_score = -1
+        for score in doc_scores:
+            if score > max_score:
+                max_score = score
+        if max_score < 0:
+            continue
+        for j in range(len(doc_scores)):
+            if doc_scores[j] == max_score:
+                best_docs.append(doc_ids[j])
+                best_docs_scores.append(doc_scores[j])
+                doc_scores[j] = -1
+
+    if len(best_docs) > 0:
+        for i in range(len(best_docs)):
+            if i >= 10:
+                break
+            print("doc id : " + str(best_docs[i]) + " with score : " + str(best_docs_scores[i]))
+    else:
+        print('No Relevant Documents Found!')
+
+
+def rate_docs(processed_query, index_table, number_of_docs, similar_words, is_reading_from_window=False,
+              window_docs=[]):
     query_term_vector = []
     query_vector_tf = []
     # deleting duplicates and making a frequency vector for query
@@ -43,20 +84,9 @@ def search_query(processed_query, index_table, number_of_docs, is_reading_from_w
             query_vector_idf.append(0)
     for i in range(len(query_term_vector)):
         dictionary = index_table.get_dictionary(query_term_vector[i])
-        # print(dictionary)
         # in case of not finding a word in dictionary
-        if dictionary is None:
-            dictionary = []
-            element = index_table.get_all_occurrences(query_term_vector[i])
-            if not element:
-                print(str(query_term_vector[i]) + ' not found')
-                closest_words = find_closest_words(query_term_vector[i], index_table)
-                if len(closest_words) == 0:
-                    print('no close words found to ' + query_term_vector[i] + ' !')
-                else:
-                    print('did you mean :')
-                    for word in closest_words:
-                        print(word)
+        if dictionary is None and similar_words:
+            check_for_similar_words(index_table, query_term_vector, i)
 
         for doc in dictionary:
             if is_reading_from_window:
@@ -92,36 +122,17 @@ def search_query(processed_query, index_table, number_of_docs, is_reading_from_w
         for i in range(len(vector)):
             score += vector[i] * query_vector_tf[i] * query_vector_idf[i]
         doc_scores.append(score)
-    # print(query_term_vector)
-    # print(query_vector_tf)
-    # print(query_vector_idf)
-    # print(doc_ids)
-    # print(doc_vectors)
-    # print(doc_scores)
+    return doc_scores, doc_ids
 
-    best_docs = []
-    best_docs_scores = []
 
-    for i in range(10):
-        if len(doc_scores) > 0:
-            max_score = doc_scores[0]
+def check_for_similar_words(index_table, query_term_vector, i):
+    element = index_table.get_all_occurrences(query_term_vector[i])
+    if not element:
+        print(str(query_term_vector[i]) + ' not found')
+        closest_words = find_closest_words(query_term_vector[i], index_table)
+        if len(closest_words) == 0:
+            print('no close words found to ' + query_term_vector[i] + ' !')
         else:
-            max_score = -1
-        for score in doc_scores:
-            if score > max_score:
-                max_score = score
-        if max_score < 0:
-            continue
-        for j in range(len(doc_scores)):
-            if doc_scores[j] == max_score:
-                best_docs.append(doc_ids[j])
-                best_docs_scores.append(doc_scores[j])
-                doc_scores[j] = -1
-
-    if len(best_docs) > 0:
-        for i in range(len(best_docs)):
-            if i >= 10:
-                break
-            print("doc id : " + str(best_docs[i]) + " with score : " + str(best_docs_scores[i]))
-    else:
-        print('No Relevant Documents Found!')
+            print('did you mean :')
+            for word in closest_words:
+                print(word)

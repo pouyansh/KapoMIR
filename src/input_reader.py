@@ -22,3 +22,15 @@ def read_csv(path):
                 temp_line += l + " "
             documents.append(temp_line)
     return documents[1:]
+
+
+def read_csv_phase2(path):
+    documents = []
+    with open(path, 'r') as csv_file:
+        csv_reader = csv.reader(csv_file)
+        for line in csv_reader:
+            temp_line = ""
+            for l in range(1, len(line)):
+                temp_line += line[l] + " "
+            documents.append([line[0], temp_line])
+    return documents[1:]
