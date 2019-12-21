@@ -1,4 +1,4 @@
-from src.search import rate_english_doc
+from src.search import rate_english_doc, csv
 
 
 def knn(query, index_table, docs_number, ks, documents):
@@ -29,8 +29,6 @@ def test_knn(tokens_test, index_table, documents, ks, offset, docs_number):
         cs = knn(tokens_test[i], index_table, docs_number, ks, documents)
         for j in range(len(ks)):
             c = cs[j]
-            if i % 20 == 0:
-                print(c, documents.get_doc_type(i + offset))
             if str(c) == str(documents.get_doc_type(i + offset)):
                 correctly_classified[j] += 1
                 print(i, correctly_classified)
@@ -38,3 +36,26 @@ def test_knn(tokens_test, index_table, documents, ks, offset, docs_number):
         print("k: ", ks[j])
         print("number of correctly classified: " + str(correctly_classified[j]))
         print("accuracy: " + str(correctly_classified[j]/len(tokens_test)))
+
+
+def predict_knn_and_save(docs, index_table, documents, k, docs_number):
+    output = []
+    with open("../output-phase2/predicted_classes.csv", 'w', newline='') as f:
+        writer = csv.writer(f)
+        for i in range(len(docs)):
+            if i % 50 == 0:
+                print(i)
+            doc = docs[i]
+            c = knn(doc, index_table, docs_number, [k], documents)
+            writer.writerow([i, c[0]])
+            output.append(c[0])
+    return output
+
+
+def read_results():
+    output = []
+    with open("../output-phase2/predicted_classes.csv", 'r', newline='') as f:
+        reader = csv.reader(f)
+        for row in reader:
+            output.append(row[1])
+    return output

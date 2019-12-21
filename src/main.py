@@ -1,8 +1,6 @@
 from src.Proximity import proximity_search
-from src.bigram_indexing import BigramIndex
-from src.input_reader import *
-from src.preprocess import *
 from src.indexing import *
+from src.input_reader import *
 from src.search import *
 
 
@@ -95,7 +93,6 @@ def main():
             else:
                 temp_query = persian_preprocess(query)
             doc_ids = proximity_search(temp_query, index_table, window, is_vb, is_gamma)
-            print(doc_ids)
             if is_english(query):
                 search_english_query(query, index_table, 1000, True, doc_ids)
                 # 1000 english documents

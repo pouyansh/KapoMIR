@@ -3,7 +3,7 @@ from src.edit_distance import *
 import math
 
 
-def search_persian_query(query, index_table, number_of_docs, similar_words, is_reading_from_window=False,
+def search_persian_query(query, index_table, number_of_docs, similar_words=True, is_reading_from_window=False,
                          window_docs=None):
     if window_docs is None:
         window_docs = []
@@ -14,7 +14,7 @@ def search_persian_query(query, index_table, number_of_docs, similar_words, is_r
         search_query(processed_query, index_table, number_of_docs, similar_words)
 
 
-def search_english_query(query, index_table, number_of_docs, similar_words, is_reading_from_window=False,
+def search_english_query(query, index_table, number_of_docs, similar_words=True, is_reading_from_window=False,
                          window_docs=None):
     if window_docs is None:
         window_docs = []
