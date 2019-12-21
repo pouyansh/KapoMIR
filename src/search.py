@@ -4,7 +4,9 @@ import math
 
 
 def search_persian_query(query, index_table, number_of_docs, similar_words, is_reading_from_window=False,
-                         window_docs=[]):
+                         window_docs=None):
+    if window_docs is None:
+        window_docs = []
     processed_query, s = stopwords(persian_preprocess(query), True)
     if is_reading_from_window:
         search_query(processed_query, index_table, number_of_docs, similar_words, is_reading_from_window, window_docs)
@@ -13,7 +15,9 @@ def search_persian_query(query, index_table, number_of_docs, similar_words, is_r
 
 
 def search_english_query(query, index_table, number_of_docs, similar_words, is_reading_from_window=False,
-                         window_docs=[]):
+                         window_docs=None):
+    if window_docs is None:
+        window_docs = []
     processed_query, s = stopwords(english_preprocess(query), True)
     if is_reading_from_window:
         search_query(processed_query, index_table, number_of_docs, similar_words, is_reading_from_window, window_docs)
@@ -23,11 +27,13 @@ def search_english_query(query, index_table, number_of_docs, similar_words, is_r
 
 def rate_english_doc(query, index_table, number_of_docs):
     processed_query, s = stopwords(english_preprocess(query), True)
-    return rate_docs(processed_query, index_table, number_of_docs, False)
+    return rate_docs(processed_query, index_table, number_of_docs, False, False, [], False)
 
 
 def search_query(processed_query, index_table, number_of_docs, similar_words, is_reading_from_window=False,
-                 window_docs=[]):
+                 window_docs=None):
+    if window_docs is None:
+        window_docs = []
     doc_scores, doc_ids = rate_docs(processed_query, index_table, number_of_docs, similar_words, is_reading_from_window,
                                     window_docs)
 
@@ -60,7 +66,9 @@ def search_query(processed_query, index_table, number_of_docs, similar_words, is
 
 
 def rate_docs(processed_query, index_table, number_of_docs, similar_words, is_reading_from_window=False,
-              window_docs=[]):
+              window_docs=None, normalization=True):
+    if window_docs is None:
+        window_docs = []
     query_term_vector = []
     query_vector_tf = []
     # deleting duplicates and making a frequency vector for query
@@ -85,8 +93,10 @@ def rate_docs(processed_query, index_table, number_of_docs, similar_words, is_re
     for i in range(len(query_term_vector)):
         dictionary = index_table.get_dictionary(query_term_vector[i])
         # in case of not finding a word in dictionary
-        if dictionary is None and similar_words:
-            check_for_similar_words(index_table, query_term_vector, i)
+        if dictionary is None:
+            dictionary = []
+            if similar_words:
+                check_for_similar_words(index_table, query_term_vector, i)
 
         for doc in dictionary:
             if is_reading_from_window:
@@ -110,13 +120,14 @@ def rate_docs(processed_query, index_table, number_of_docs, similar_words, is_re
         # print(doc_ids)
         # print(doc_vectors)
 
-    for vector in doc_vectors:
-        vector_sum = 0
-        for i in vector:
-            vector_sum += i * i
-        vector_sum = math.sqrt(vector_sum)
-        for i in range(len(vector)):
-            vector[i] = vector[i] / vector_sum
+    if normalization:
+        for vector in doc_vectors:
+            vector_sum = 0
+            for i in vector:
+                vector_sum += i * i
+            vector_sum = math.sqrt(vector_sum)
+            for i in range(len(vector)):
+                vector[i] = vector[i] / vector_sum
     for vector in doc_vectors:
         score = 0
         for i in range(len(vector)):

@@ -277,7 +277,8 @@ class IndexTable:
     def get_all_records(self, filename_indexes, filename_bigram):
         lines = []
         terms = []
-        self.bigram.save_to_file(filename_bigram)
+        if filename_bigram:
+            self.bigram.save_to_file(filename_bigram)
         if self.is_gamma:
             for term in self.table:
                 terms.append(term)
