@@ -1,9 +1,10 @@
-from src.KNN import test_knn, predict_knn_and_save, read_results
-from src.document import Documents
-from src.indexing import insert_index, IndexTable, save_to_file
-from src.input_reader import read_csv_phase2, read_csv
-from src.preprocess import english_preprocess, stopwords
-from src.search import search_english_query
+from KNN import test_knn, predict_knn_and_save, read_results
+from document import Documents
+from indexing import insert_index, IndexTable, save_to_file
+from input_reader import read_csv_phase2, read_csv
+from preprocess import english_preprocess, stopwords
+from search import search_english_query
+from naive_bayes import naive_bayes
 
 
 def read_files(stopwords_list):
@@ -58,6 +59,24 @@ def run_phase2():
                 doc_ids.append(i)
         search_english_query(query, index_table_english, 1000, True, True, doc_ids)
 
+def run_algs():
+    token_list_english = []
+    is_vb = False
+    is_gamma = False
+    english_documents = read_csv('../raw-database/English.csv')
+    for i in range(len(english_documents)):
+        # feed in the body of documents index 1
+        token_list_english.append(english_preprocess(english_documents[i]))
 
+    # removing stopwords from term lists
+    preprocessed_english, stopwords_list = stopwords(token_list_english, False, [])
+
+    token_list_train, test_docs, documents = read_files(stopwords_list)
+    index_table = insert_index(IndexTable([], is_vb, is_gamma), token_list_train, 0)
+    
+    words_table = index_table.get_table()
+
+    naive_bayes(words_table, index_table, documents, stopwords_list)
+    
 if __name__ == "__main__":
-    run_phase2()
+    run_algs()
