@@ -46,6 +46,11 @@ def label_test_docs(N, Tc_table, new_word_rate):
             if(j in stopwords):
                 i.remove(j)
     true_positives = 0
+    real_tags = [0, 0, 0, 0]
+    for i in range(len(test_documents)):
+        real_tags[int(test_documents[i][0]) - 1] += 1
+    decided_tags = [0, 0, 0, 0]
+    true_tags = [0, 0, 0, 0]
     for i in range(len(token_list)):
         total_score = N.copy()
         for j in token_list[i]:
@@ -55,9 +60,13 @@ def label_test_docs(N, Tc_table, new_word_rate):
                 score = new_word_rate
             for k in range(4):
                 total_score[k] += score[k]
+        decided_tags[max_index(total_score)] += 1
         if (max_index(total_score) + 1) == int(test_documents[i][0]):
+            true_tags[int(test_documents[i][0]) - 1] += 1
             true_positives += 1
     print("accuracy is " + str((true_positives * 100)/len(token_list)) + "%" )
+    for i in range(4):
+        print("precision in class " + str(i + 1) + " is " + str(round(true_tags[i]/decided_tags[i] * 100, 2)) + " and recall is " + str(round(true_tags[i]/real_tags[i] * 100, 2)))
             
         
 def max_index(array):

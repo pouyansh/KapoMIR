@@ -58,10 +58,24 @@ def random_forest(train_list, test_list, documents, index_table, docs_number):
     predictions_list = regressor.predict(score_list)
     
     true_positives = 0
+    real_tags = [0, 0, 0, 0]
+    for i in range(len(test_documents)):
+        real_tags[int(test_documents[i][0]) - 1] += 1
+    decided_tags = [0, 0, 0, 0]
+    true_tags = [0, 0, 0, 0]
     for i in range(len(predictions_list)):
+        decided_tags[int(predictions_list[i]) - 1] += 1
         if int(predictions_list[i]) == int(test_documents[i][0]):
+            true_tags[int(predictions_list[i]) - 1] += 1
             true_positives += 1
+            
+    print(real_tags)
+    print(decided_tags)
+    print(true_tags)
+    print(true_positives)
     print("The acuracy is " + str((true_positives/len(predictions_list)) * 100))
+    for i in range(4):
+        print("precision in class " + str(i + 1) + " is " + str(round(true_tags[i]/decided_tags[i] * 100, 2)) + " and recall is " + str(round(true_tags[i]/real_tags[i] * 100, 2)))
     
     
     # print(len(x))

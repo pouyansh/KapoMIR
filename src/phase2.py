@@ -61,7 +61,7 @@ def run_phase2():
                 doc_ids.append(i)
         search_english_query(query, index_table_english, 1000, True, True, doc_ids)
 
-def run_algs():
+def nb():
     token_list_english = []
     is_vb = False
     is_gamma = False
@@ -115,4 +115,4 @@ def rf():
     random_forest(token_list_train, test_docs, documents, index_table, len(token_list_train))
     
 if __name__ == "__main__":
-    rf()
+    svm()
