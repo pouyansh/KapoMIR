@@ -1,7 +1,7 @@
 import csv
 
-from src.utilities import *
-from src.bigram_indexing import BigramIndex
+from utilities import *
+from bigram_indexing import BigramIndex
 
 
 class TermList:

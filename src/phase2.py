@@ -5,6 +5,8 @@ from input_reader import read_csv_phase2, read_csv
 from preprocess import english_preprocess, stopwords
 from search import search_english_query
 from naive_bayes import naive_bayes
+from SVM import svm as svm_alg
+from random_forest import random_forest
 
 
 def read_files(stopwords_list):
@@ -77,6 +79,40 @@ def run_algs():
     words_table = index_table.get_table()
 
     naive_bayes(words_table, index_table, documents, stopwords_list)
+
+def svm():
+    token_list_english = []
+    is_vb = False
+    is_gamma = False
+    english_documents = read_csv('../raw-database/English.csv')
+    for i in range(len(english_documents)):
+        # feed in the body of documents index 1
+        token_list_english.append(english_preprocess(english_documents[i]))
+
+    # removing stopwords from term lists
+    preprocessed_english, stopwords_list = stopwords(token_list_english, False, [])
+
+    token_list_train, test_docs, documents = read_files(stopwords_list)
+    index_table = insert_index(IndexTable([], is_vb, is_gamma), token_list_train, 0)
+
+    svm_alg(token_list_train, test_docs, documents, index_table, len(token_list_train))
+    
+def rf():
+    token_list_english = []
+    is_vb = False
+    is_gamma = False
+    english_documents = read_csv('../raw-database/English.csv')
+    for i in range(len(english_documents)):
+        # feed in the body of documents index 1
+        token_list_english.append(english_preprocess(english_documents[i]))
+
+    # removing stopwords from term lists
+    preprocessed_english, stopwords_list = stopwords(token_list_english, False, [])
+
+    token_list_train, test_docs, documents = read_files(stopwords_list)
+    index_table = insert_index(IndexTable([], is_vb, is_gamma), token_list_train, 0)
+
+    random_forest(token_list_train, test_docs, documents, index_table, len(token_list_train))
     
 if __name__ == "__main__":
-    run_algs()
+    rf()

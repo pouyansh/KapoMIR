@@ -1,7 +1,7 @@
-from src.Proximity import proximity_search
-from src.indexing import *
-from src.input_reader import *
-from src.search import *
+from Proximity import proximity_search
+from indexing import *
+from input_reader import *
+from search import *
 
 
 def main():

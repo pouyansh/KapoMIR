@@ -1,4 +1,4 @@
-from src.utilities import *
+from utilities import *
 
 
 def proximity_search(query, index_table, window, is_vb, is_gamma):

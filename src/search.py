@@ -1,5 +1,5 @@
-from src.preprocess import *
-from src.edit_distance import *
+from preprocess import *
+from edit_distance import *
 import math
 
 

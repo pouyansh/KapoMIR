@@ -1,4 +1,4 @@
-from src.search import rate_english_doc, csv
+from search import rate_english_doc, csv
 
 
 def knn(query, index_table, docs_number, ks, documents):
