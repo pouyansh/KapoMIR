@@ -1,12 +1,12 @@
-from KNN import test_knn, predict_knn_and_save, read_results
-from document import Documents
-from indexing import insert_index, IndexTable, save_to_file
-from input_reader import read_csv_phase2, read_csv
-from preprocess import english_preprocess, stopwords
-from search import search_english_query
-from naive_bayes import naive_bayes
-from SVM import svm as svm_alg
-from random_forest import random_forest
+from src.KNN import test_knn, predict_knn_and_save, read_results
+from src.document import Documents
+from src.indexing import insert_index, IndexTable, save_to_file
+from src.input_reader import read_csv_phase2, read_csv
+from src.preprocess import english_preprocess, stopwords
+from src.search import search_english_query
+from src.naive_bayes import naive_bayes
+from src.SVM import svm as svm_alg
+from src.random_forest import random_forest
 
 
 def read_files(stopwords_list):
@@ -25,7 +25,7 @@ def read_files(stopwords_list):
 
     token_list_train, stopwords_list = stopwords(token_list_train, False, stopwords_list)
 
-    return token_list_train, test_documents, documents
+    return token_list_train, test_documents, documents, train_documents
 
 
 def run_phase2():
@@ -38,14 +38,14 @@ def run_phase2():
         token_list_english.append(english_preprocess(english_documents[i]))
 
     # removing stopwords from term lists
-    # preprocessed_english, stopwords_list = stopwords(token_list_english, False, [])
+    preprocessed_english, stopwords_list = stopwords(token_list_english, True)
 
-    # token_list_train, test_docs, documents = read_files(stopwords_list)
-    # index_table = insert_index(IndexTable([], is_vb, is_gamma), token_list_train, 0)
+    token_list_train, test_docs, documents, train_docs = read_files(stopwords_list)
+    index_table = insert_index(IndexTable([], is_vb, is_gamma), token_list_train, 0)
     # save_to_file(index_table, "", "../output-phase2/index_table_indexes", "")
 
-    # test_knn([test_docs[i][1] for i in range(len(test_docs))], index_table, documents, [1, 5, 9],
-    #          len(token_list_train), len(token_list_train))
+    test_knn([train_docs[i][1] for i in range(1000)], index_table, documents, [9],
+             0, len(token_list_train))
 
     # predicted_values = predict_knn_and_save(english_documents, index_table, documents, 9, len(token_list_train))
     predicted_values = read_results()
@@ -115,4 +115,4 @@ def rf():
     random_forest(token_list_train, test_docs, documents, index_table, len(token_list_train))
     
 if __name__ == "__main__":
-    rf()
+    run_phase2()
