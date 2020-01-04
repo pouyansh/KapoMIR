@@ -1,7 +1,7 @@
 import csv
 
-from utilities import *
-from bigram_indexing import BigramIndex
+from src.utilities import *
+from src.bigram_indexing import BigramIndex
 
 
 class TermList:
@@ -362,8 +362,6 @@ class IndexTable:
 
 def insert_index(index_table, doc_list, offset):
     for doc_id in range(len(doc_list)):
-        if doc_id % 100 == 0:
-            print(doc_id)
         for item_position in range(len(doc_list[doc_id])):
             term = doc_list[doc_id][item_position]
             index_table.add_record(term, doc_id + offset, item_position)
@@ -405,8 +403,6 @@ def read_from_file(filename_words, filename_indexes, filenames_bigram, is_vb, is
         counter = 0
         for word in data_words:
             counter += 1
-            if counter % 1000 == 0:
-                print(counter)
             try:
                 with open(filename_indexes + word, 'rb') as f:
                     rows = f.read().decode('utf-8')
@@ -437,7 +433,6 @@ def read_from_file(filename_words, filename_indexes, filenames_bigram, is_vb, is
                     data_positions = ""
                     while cnt_positions < length:
                         try:
-                            print(values[counter])
                             data_positions += variable_byte_encode(values[counter])
                         except IndexError:
                             print(line, counter, len(values), df, doc_id)

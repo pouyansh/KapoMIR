@@ -61,6 +61,7 @@ def run_phase2():
                 doc_ids.append(i)
         search_english_query(query, index_table_english, 1000, True, True, doc_ids)
 
+
 def nb():
     token_list_english = []
     is_vb = False
@@ -75,10 +76,11 @@ def nb():
 
     token_list_train, test_docs, documents = read_files(stopwords_list)
     index_table = insert_index(IndexTable([], is_vb, is_gamma), token_list_train, 0)
-    
+
     words_table = index_table.get_table()
 
     naive_bayes(words_table, index_table, documents, stopwords_list)
+
 
 def svm():
     token_list_english = []
@@ -96,7 +98,8 @@ def svm():
     index_table = insert_index(IndexTable([], is_vb, is_gamma), token_list_train, 0)
 
     svm_alg(token_list_train, test_docs, documents, index_table, len(token_list_train))
-    
+
+
 def rf():
     token_list_english = []
     is_vb = False
@@ -113,10 +116,7 @@ def rf():
     index_table = insert_index(IndexTable([], is_vb, is_gamma), token_list_train, 0)
 
     random_forest(token_list_train, test_docs, documents, index_table, len(token_list_train))
-    
+
+
 if __name__ == "__main__":
-<<<<<<< HEAD
-    svm()
-=======
     run_phase2()
->>>>>>> ac858e4b17fc2c752dae6af8bc746ae6d821f3d7

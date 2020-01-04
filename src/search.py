@@ -1,5 +1,5 @@
-from preprocess import *
-from edit_distance import *
+from src.preprocess import *
+from src.edit_distance import *
 import math
 
 
@@ -67,8 +67,6 @@ def search_query(processed_query, index_table, number_of_docs, similar_words, is
 
 def rate_docs(processed_query, index_table, number_of_docs, similar_words, is_reading_from_window=False,
               window_docs=None, normalization=True):
-    if window_docs is None:
-        window_docs = []
     query_term_vector = []
     query_vector_tf = []
     # deleting duplicates and making a frequency vector for query
@@ -81,15 +79,44 @@ def rate_docs(processed_query, index_table, number_of_docs, similar_words, is_re
                 if term == query_term_vector[i]:
                     query_vector_tf[i] += 1
     query_vector_idf = []
-    doc_ids = []
-    doc_vectors = []
-    doc_scores = []
     for term in query_term_vector:
         if index_table.get_all_occurrences(term):
             term_frequency = index_table.get_table()[term][1]
             query_vector_idf.append(math.log10(number_of_docs / term_frequency))
         else:
             query_vector_idf.append(0)
+    doc_vectors, doc_ids = calculate_tf_idf(query_term_vector, index_table, similar_words,
+                                            is_reading_from_window,
+                                            window_docs, normalization)
+    doc_scores = []
+    for vector in doc_vectors:
+        score = 0
+        for i in range(len(vector)):
+            score += vector[i] * query_vector_tf[i] * query_vector_idf[i]
+        doc_scores.append(score)
+    return doc_scores, doc_ids
+
+
+def check_for_similar_words(index_table, query_term_vector, i):
+    element = index_table.get_all_occurrences(query_term_vector[i])
+    if not element:
+        print(str(query_term_vector[i]) + ' not found')
+        closest_words = find_closest_words(query_term_vector[i], index_table)
+        if len(closest_words) == 0:
+            print('no close words found to ' + query_term_vector[i] + ' !')
+        else:
+            print('did you mean :')
+            for word in closest_words:
+                print(word)
+
+
+def calculate_tf_idf(query_term_vector, index_table, similar_words, is_reading_from_window=False,
+                     window_docs=None, normalization=True):
+    if window_docs is None:
+        window_docs = []
+
+    doc_ids = []
+    doc_vectors = []
     for i in range(len(query_term_vector)):
         dictionary = index_table.get_dictionary(query_term_vector[i])
         # in case of not finding a word in dictionary
@@ -117,8 +144,6 @@ def rate_docs(processed_query, index_table, number_of_docs, similar_words, is_re
         for vector in doc_vectors:
             if len(vector) < i + 1:
                 vector.append(0)
-        # print(doc_ids)
-        # print(doc_vectors)
 
     if normalization:
         for vector in doc_vectors:
@@ -128,22 +153,4 @@ def rate_docs(processed_query, index_table, number_of_docs, similar_words, is_re
             vector_sum = math.sqrt(vector_sum)
             for i in range(len(vector)):
                 vector[i] = vector[i] / vector_sum
-    for vector in doc_vectors:
-        score = 0
-        for i in range(len(vector)):
-            score += vector[i] * query_vector_tf[i] * query_vector_idf[i]
-        doc_scores.append(score)
-    return doc_scores, doc_ids
-
-
-def check_for_similar_words(index_table, query_term_vector, i):
-    element = index_table.get_all_occurrences(query_term_vector[i])
-    if not element:
-        print(str(query_term_vector[i]) + ' not found')
-        closest_words = find_closest_words(query_term_vector[i], index_table)
-        if len(closest_words) == 0:
-            print('no close words found to ' + query_term_vector[i] + ' !')
-        else:
-            print('did you mean :')
-            for word in closest_words:
-                print(word)
+    return doc_vectors, doc_ids
