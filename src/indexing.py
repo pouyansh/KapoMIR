@@ -188,9 +188,9 @@ class IndexTable:
 
         # case 3: previous term has a doc id lower than doc_id
         child = previous_term.get_child()
+        self.table[term][1] += 1
         if self.is_vb or self.is_gamma:
             new_term = TermList(doc_id - previous_id, position, previous_term, child, self.is_vb, self.is_gamma)
-            self.table[term][1] += 1
             if child:
                 child.set_doc_id(child.get_doc_id() - (doc_id - previous_id))
         else:

@@ -78,21 +78,14 @@ def rate_docs(processed_query, index_table, number_of_docs, similar_words, is_re
             for i in range(len(query_term_vector)):
                 if term == query_term_vector[i]:
                     query_vector_tf[i] += 1
-    query_vector_idf = []
-    for term in query_term_vector:
-        if index_table.get_all_occurrences(term):
-            term_frequency = index_table.get_table()[term][1]
-            query_vector_idf.append(math.log10(number_of_docs / term_frequency))
-        else:
-            query_vector_idf.append(0)
-    doc_vectors, doc_ids = calculate_tf_idf(query_term_vector, index_table, similar_words,
+    doc_vectors, doc_ids = calculate_tf_idf(query_term_vector, index_table, similar_words, number_of_docs,
                                             is_reading_from_window,
                                             window_docs, normalization)
     doc_scores = []
     for vector in doc_vectors:
         score = 0
         for i in range(len(vector)):
-            score += vector[i] * query_vector_tf[i] * query_vector_idf[i]
+            score += vector[i] * query_vector_tf[i]
         doc_scores.append(score)
     return doc_scores, doc_ids
 
@@ -110,10 +103,18 @@ def check_for_similar_words(index_table, query_term_vector, i):
                 print(word)
 
 
-def calculate_tf_idf(query_term_vector, index_table, similar_words, is_reading_from_window=False,
-                     window_docs=None, normalization=True):
+def calculate_tf_idf(query_term_vector, index_table, similar_words, number_of_docs,
+                     is_reading_from_window=False, window_docs=None, normalization=True):
     if window_docs is None:
         window_docs = []
+
+    query_vector_idf = []
+    for term in query_term_vector:
+        if index_table.get_all_occurrences(term):
+            term_frequency = index_table.get_table()[term][1]
+            query_vector_idf.append(math.log10(number_of_docs / term_frequency))
+        else:
+            query_vector_idf.append(0)
 
     doc_ids = []
     doc_vectors = []
@@ -152,5 +153,5 @@ def calculate_tf_idf(query_term_vector, index_table, similar_words, is_reading_f
                 vector_sum += i * i
             vector_sum = math.sqrt(vector_sum)
             for i in range(len(vector)):
-                vector[i] = vector[i] / vector_sum
+                vector[i] = vector[i] / vector_sum * query_vector_idf[i]
     return doc_vectors, doc_ids
