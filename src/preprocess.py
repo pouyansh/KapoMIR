@@ -10,7 +10,7 @@ ps = PorterStemmer()
 
 
 def persian_normalizer(text):
-    stop_words = '،؛%«»:"<>\\[]{}|-،!?\'<>-_+=,:\";./\\$%#*()&؟'
+    stop_words = '!@#$%^&*()-_=+:;\'\"?/<>'
     for c in stop_words:
         text = text.replace(c, ' ')
     hazm_normalizer = hazm.Normalizer()
@@ -22,13 +22,6 @@ def persian_tokenize(text):
 
 
 def delete_persian_stop_words(list):
-    stop_words = '،!?'
-    output = []
-    for token in list:
-        if token in stop_words:
-            continue
-        else:
-            output.append(token)
     return output
 
 
@@ -45,7 +38,7 @@ def persian_preprocess(text):
 
 
 def english_normalizer(text):
-    stop_words = '،!?\'<>-_+=,:\";./\\$%#*()'
+    stop_words = '!@#$%^&*()-_=+:;\'\"?/<>'
     for c in stop_words:
         text = text.replace(c, ' ')
     return text.lower()
@@ -78,17 +71,6 @@ def english_preprocess(text):
 
 
 def stopwords(terms_list, check=False, stopwords_list=[], directory=""):
-    # persian_stopwords = [']', '[', '.', 'و', 'در', '{', '}', '|', '=', ':', 'به', 'از', ')', '(', 'که', '*', 'اس',
-    #                      'این', 'را', '==', '«', '»']
-    # english_stopwords = ['the', '.', 'a', 'of', 'to', 'in', 'and', '-', ';', 'on', 'it', 'for', ')', '(', "'s", '#',
-    #                      'that', 'reuter', 'as', '39', 'with', 'at', 'by']
-    # deleted_terms = persian_stopwords + english_stopwords
-    # output = []
-    # for term in terms_list:
-    #     if term in deleted_terms:
-    #         continue
-    #     else:
-    #         output.append(term)
     if not check:
         m = {}
         for doc in terms_list:

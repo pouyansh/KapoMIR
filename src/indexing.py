@@ -1,7 +1,7 @@
 import csv
 
 from src.utilities import *
-from src.bigram_indexing import BigramIndex
+# from src.bigram_indexing import BigramIndex
 
 
 class TermList:
@@ -65,9 +65,9 @@ class IndexTable:
         self.table = {}
         self.is_vb = is_vb
         self.is_gamma = is_gamma
-        self.bigram = BigramIndex()
-        if filename_bigram:
-            self.bigram.read_from_file(filename_bigram)
+        # self.bigram = BigramIndex()
+        # if filename_bigram:
+        #     self.bigram.read_from_file(filename_bigram)
         self.read_from_file(lines)
 
     def get_table(self):
@@ -96,7 +96,7 @@ class IndexTable:
                         counter += 2
                         continue
                     self.add_record(term, doc_id, int(line[counter]))
-                    self.bigram.add_term(term)
+                    # self.bigram.add_term(term)
                     counter += 1
 
     def read_from_file_gamma(self, lines):
@@ -110,7 +110,7 @@ class IndexTable:
                 positions += gamma_encode(line[counter])
                 counter += 1
             temp_term_list = self.create_term(term, doc_id, positions)
-            self.bigram.add_term(term)
+            # self.bigram.add_term(term)
             while counter < len(line):
                 doc_id = line[counter]
                 counter += 1
@@ -121,21 +121,21 @@ class IndexTable:
                     positions += gamma_encode(line[counter])
                     counter += 1
                 temp_term_list = self.insert_all_doc_occurrences(term, doc_id, positions, temp_term_list)
-                self.bigram.add_term(term)
+                # self.bigram.add_term(term)
 
     def read_from_file_variable_byte(self, lines):
         for line in lines:
             term = line[0]
             doc_id = line[1]
             temp_term_list = self.create_term(term, doc_id, line[2])
-            self.bigram.add_term(term)
+            # self.bigram.add_term(term)
             counter = 3
             while counter < len(line):
                 doc_id = line[counter]
                 positions = line[counter + 1]
                 counter += 1
                 temp_term_list = self.insert_all_doc_occurrences(term, doc_id, positions, temp_term_list)
-                self.bigram.add_term(term)
+                # self.bigram.add_term(term)
                 counter += 1
 
     # For case when no TermList for term exists in the dictionary. Creates a TermList and adds it to the dictionary.
@@ -202,7 +202,7 @@ class IndexTable:
         previous_term.set_child(new_term)
 
     def add_record(self, term, doc_id, position):
-        self.bigram.add_term(term)
+        # self.bigram.add_term(term)
         if term not in self.table:
             if self.is_vb:
                 position = variable_byte_encode(position)
@@ -225,7 +225,7 @@ class IndexTable:
                     else:
                         if not record.get_child():
                             del self.table[term]
-                            self.bigram.delete_term(term)
+                            # self.bigram.delete_term(term)
                             continue
                         else:
                             self.table[term][0] = record.get_child()
@@ -277,8 +277,8 @@ class IndexTable:
     def get_all_records(self, filename_indexes, filename_bigram):
         lines = []
         terms = []
-        if filename_bigram:
-            self.bigram.save_to_file(filename_bigram)
+        # if filename_bigram:
+        #     self.bigram.save_to_file(filename_bigram)
         if self.is_gamma:
             for term in self.table:
                 terms.append(term)
