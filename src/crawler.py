@@ -7,9 +7,9 @@ class BrickSetSpider(scrapy.Spider):
     paper_id = 0
     def parse(self, response):
         title = response.css('#paper-header h1 ::text').extract_first()
-        abstract = response.css('.abstract__text::text').extract_first()
+        abstract = response.xpath("//meta[@name='description']/@content")[0].extract()
         date = response.css('.paper-meta li:nth-child(2) span:nth-child(2) ::text').extract_first()
-        authors = response.css('.author-list span a ::text').extract()
+        authors = response.xpath("//meta[@name='citation_author']/@content").extract()
         references = response.css('#references .card-content .paper-detail-content-card .citation-list__citations .paper-citation .citation__body h2 a span span ::text').extract()
         references_links = response.css('#references .card-content .paper-detail-content-card .citation-list__citations .paper-citation .citation__body h2 a ::attr(href)').extract()
         for i in references_links[:5]:
