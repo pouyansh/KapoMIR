@@ -4,15 +4,17 @@ import numpy as np
 
 
 def calculate_page_rank(data, alpha, epsilon):
+    ids = [e["id"] for e in data]
     page_ranks = np.array([1 / len(data) for _ in range(len(data))])
     b = np.array([(1 - alpha) * 1 / len(data) for _ in range(len(data))])
     a = [[0 for _ in range(len(data))] for _ in range(len(data))]
     for d in range(len(data)):
         refs = []
-        for r in data[d]["references_ids"]:
-            if r < len(data):
-                refs.append(r)
+        for r in data[d]["references"]:
+            if r in ids:
+                refs.append(ids.index(r))
         if not refs:
+            print(ids[d])
             refs = list(range(len(data)))
         for ref in refs:
             a[ref][d] += alpha / len(refs)
@@ -31,7 +33,7 @@ def calculate_page_rank(data, alpha, epsilon):
 
 
 def read_json():
-    with open('data1.json', 'r') as f:
+    with open('data2.json', 'r') as f:
         data = json.load(f)
     return data
 
@@ -41,6 +43,6 @@ if __name__ == "__main__":
     with open('../output-phase3/pageRank.csv', 'w', newline='') as f:
         writer = csv.writer(f)
         prs = calculate_page_rank(json_data, 0.5, 0.0001)
-        full_list = [[i, prs[i]] for i in range(len(prs))]
+        full_list = [[json_data[i]["id"], prs[i]] for i in range(len(prs))]
         for row in full_list:
             writer.writerow(row)
